@@ -7,10 +7,10 @@ from uuid import UUID
 from pandas import DataFrame
 from requests import Response, delete, get, patch, post, put
 
-from models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
-from models.kronicle_payload import KroniclePayload
-from utils.log import log_d, log_w
-from utils.str_utils import check_is_uuid4, get_type, slash_join
+from kronicle.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
+from kronicle.models.kronicle_payload import KroniclePayload
+from kronicle.utils.log import log_d, log_w
+from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
 class KronicleConnector(ABC):

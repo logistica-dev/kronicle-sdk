@@ -1,8 +1,8 @@
 # connectors/kronicle_writer.py
 from typing import Any
 
-from connectors.abc_connector import KronicleConnector
-from models.kronicle_payload import KroniclePayload
+from kronicle.connectors.abc_connector import KronicleConnector
+from kronicle.models.kronicle_payload import KroniclePayload
 
 
 class KronicleWriter(KronicleConnector):
@@ -37,7 +37,7 @@ class KronicleWriter(KronicleConnector):
 
 
 if __name__ == "__main__":
-    from utils.log import log_d
+    from kronicle.utils.log import log_d
 
     here = "read Kronicle"
     log_d(here)

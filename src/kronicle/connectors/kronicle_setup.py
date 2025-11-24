@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from connectors.kronicle_writer import KronicleWriter
-from models.kronicle_errors import KronicleOperationError
-from models.kronicle_payload import KroniclePayload
-from utils.log import log_w
+from kronicle.connectors.kronicle_writer import KronicleWriter
+from kronicle.models.kronicle_errors import KronicleOperationError
+from kronicle.models.kronicle_payload import KroniclePayload
+from kronicle.utils.log import log_w
 
 
 class KronicleSetup(KronicleWriter):
@@ -48,7 +48,7 @@ class KronicleSetup(KronicleWriter):
 
 
 if __name__ == "__main__":
-    from utils.log import log_d
+    from kronicle.utils.log import log_d
 
     here = "read Kronicle"
     log_d(here)

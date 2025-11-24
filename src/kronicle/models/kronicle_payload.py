@@ -4,9 +4,9 @@ from uuid import UUID
 from pandas import DataFrame, DatetimeIndex, read_csv
 from pydantic import BaseModel, field_validator, model_validator
 
-from models.iso_datetime import IsoDateTime, now_local, now_utc
-from utils.log import log_d
-from utils.str_utils import uuid4_str
+from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
+from kronicle.utils.log import log_d
+from kronicle.utils.str_utils import uuid4_str
 
 COL_TO_PY_TYPE = {
     "str": str,

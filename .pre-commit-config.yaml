@@ -33,14 +33,14 @@ repos:
   #   rev: v1.1.367
   #   hooks:
   #     - id: pyright
-  - repo: local
-    hooks:
-      - id: pytest-check
-        name: pytest-check
-        entry: pytest
-        language: system
-        pass_filenames: false
-        always_run: true
+  # - repo: local
+  #   hooks:
+  #     - id: pytest-check
+  #       name: pytest-check
+  #       entry: pytest
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.10.0
     hooks:

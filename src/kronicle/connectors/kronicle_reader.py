@@ -1,7 +1,7 @@
 # connectors/kronicle_reader.py
 
 
-from connectors.abc_connector import KronicleConnector
+from kronicle.connectors.abc_connector import KronicleConnector
 
 
 class KronicleReader(KronicleConnector):
@@ -18,7 +18,7 @@ class KronicleReader(KronicleConnector):
 
 
 if __name__ == "__main__":
-    from utils.log import log_d
+    from kronicle.utils.log import log_d
 
     here = "read Kronicle"
     log_d(here)
