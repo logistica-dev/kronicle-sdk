@@ -1,0 +1,30 @@
+# connectors/kronicle_reader.py
+
+
+from connectors.abc_connector import KronicleConnector
+
+
+class KronicleReader(KronicleConnector):
+    """
+    Reads channels on a Kronicle microservice
+    """
+
+    def __init__(self, url: str = "http://127.0.0.1:8000"):
+        super().__init__(url)
+
+    @property
+    def prefix(self) -> str:
+        return "api/v1"
+
+
+if __name__ == "__main__":
+    from utils.log import log_d
+
+    here = "read Kronicle"
+    log_d(here)
+    kronicle_reader = KronicleReader("http://127.0.0.1:8000")
+    # [log_d(here, f"channel {channel.sensor_id}", channel) for channel in kronicle_reader.all_channels]
+    chan_id, _ = kronicle_reader.get_channel_with_max_rows()
+    if chan_id:
+        log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
+    log_d(here, "random channel", kronicle_reader.get_channel("eda45f64-5717-4562-b3fc-2c963f66afa6"))
