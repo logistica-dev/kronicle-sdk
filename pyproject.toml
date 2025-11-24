@@ -1,6 +1,6 @@
 [project]
 name = "kronicle-sdk"
-version = "0.0.2"
+version = "0.0.3"
 description = "SDK to read and write data on a Kronicle microservice"
 authors = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -47,7 +47,7 @@ target-version = ['py312']
 # ----- Tool: commitizen
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.2"
+version = "0.0.3"
 version_files = ["pyproject.toml:version"]
 
 # ----- Tool: pytest
