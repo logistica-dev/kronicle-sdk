@@ -1,11 +1,11 @@
 # connectors/kronicle_writer.py
 from typing import Any
 
-from kronicle.connectors.abc_connector import KronicleConnector
+from kronicle.connectors.abc_connector import KronicleAbstractConnector
 from kronicle.models.kronicle_payload import KroniclePayload
 
 
-class KronicleWriter(KronicleConnector):
+class KronicleWriter(KronicleAbstractConnector):
     """
     SDK to push and read data on a Kronicle
     """

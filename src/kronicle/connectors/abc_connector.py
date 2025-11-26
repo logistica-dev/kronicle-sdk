@@ -13,7 +13,7 @@ from kronicle.utils.log import log_d, log_w
 from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
-class KronicleConnector(ABC):
+class KronicleAbstractConnector(ABC):
     """
     Abstract class that implements generic connection
     methods towards Kronicle.
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     here = "abstract Kronicle connector"
     log_d(here)
     try:
-        kronicle = KronicleConnector("http://127.0.0.1:8000")  # type: ignore
+        kronicle = KronicleAbstractConnector("http://127.0.0.1:8000")  # type: ignore
     except TypeError as e:
         log_w(here, "WARNING", e)
     log_d(here, "^^^ There should be a warning above ^^^")

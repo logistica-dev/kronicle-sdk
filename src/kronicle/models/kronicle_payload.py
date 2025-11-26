@@ -191,6 +191,14 @@ class KroniclePayload(BaseModel):
         df = read_csv(csv_path, **kwargs)
         return cls(columns={col: df[col].tolist() for col in df.columns})
 
+    @classmethod
+    def str_to_py_type_map(cls):
+        return COL_TO_PY_TYPE
+
+    @classmethod
+    def py_to_str_type_map(cls):
+        return {val: key for key, val in COL_TO_PY_TYPE.items()}
+
 
 if __name__ == "__main__":
 

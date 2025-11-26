@@ -1,10 +1,10 @@
 # connectors/kronicle_reader.py
 
 
-from kronicle.connectors.abc_connector import KronicleConnector
+from kronicle.connectors.abc_connector import KronicleAbstractConnector
 
 
-class KronicleReader(KronicleConnector):
+class KronicleReader(KronicleAbstractConnector):
     """
     Reads channels on a Kronicle microservice
     """
