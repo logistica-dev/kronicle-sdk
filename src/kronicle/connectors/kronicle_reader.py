@@ -23,8 +23,15 @@ if __name__ == "__main__":
     here = "read Kronicle"
     log_d(here)
     kronicle_reader = KronicleReader("http://127.0.0.1:8000")
+    log_d(here, "nb channels", len(kronicle_reader.all_channels))
     # [log_d(here, f"channel {channel.sensor_id}", channel) for channel in kronicle_reader.all_channels]
     chan_id, _ = kronicle_reader.get_channel_with_max_rows()
-    if chan_id:
-        log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
-    log_d(here, "random channel", kronicle_reader.get_channel("eda45f64-5717-4562-b3fc-2c963f66afa6"))
+    # log_d(here, kronicle_reader.get_channel(chan_id))
+
+    # if chan_id:
+    #     log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
+    # try:
+    #     id = uuid4()
+    #     log_d(here, "random channel", kronicle_reader.get_channel(id))
+    # except KronicleHTTPError as e:
+    #     log_w(here, f"Channel {id}", e)

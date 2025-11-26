@@ -77,7 +77,7 @@ class KronicleAbstractConnector(ABC):
         body: KroniclePayload | dict | None = None,
         strict: bool = True,
         **params,
-    ):
+    ) -> KroniclePayload | list[KroniclePayload]:
         """
         Execute an HTTP request with retries and validate payload types.
 
