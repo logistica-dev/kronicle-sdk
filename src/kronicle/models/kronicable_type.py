@@ -196,6 +196,14 @@ class KronicableTypeChecker:
         """
         return str(self.annotation)
 
+    @classmethod
+    def str_to_py_type_map(cls) -> dict:
+        return dict(COL_TO_PY_TYPE.items())
+
+    @classmethod
+    def py_to_str_type_map(cls) -> dict:
+        return {val: key for key, val in COL_TO_PY_TYPE.items()}
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Example usage

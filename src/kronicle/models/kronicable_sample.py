@@ -6,7 +6,7 @@ from pydantic import BaseModel, computed_field, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now
 from kronicle.models.kronicable_type import KronicableTypeChecker
-from kronicle.models.kronicle_payload import COL_TO_PY_TYPE, KroniclePayload
+from kronicle.models.kronicle_payload import COL_TO_PY_TYPE
 
 
 class SingleTypeField:
@@ -70,7 +70,6 @@ class KronicableSample(BaseModel):
         Return a canonical sensor schema for the class, including computed fields.
         """
         schema: dict[str, str] = {}
-        py_to_str = KroniclePayload.py_to_str_type_map()
 
         # Regular fields
         for name, field in self.__class__.model_fields.items():
