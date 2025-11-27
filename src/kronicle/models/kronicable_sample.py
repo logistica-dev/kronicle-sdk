@@ -1,10 +1,12 @@
 # kronicle/models/kronicle_sample.py
-
-from typing import Union, get_args, get_origin
+from json import dumps
+from typing import Any
 
 from pydantic import BaseModel, computed_field, model_validator
 
-from kronicle.models.kronicle_payload import KroniclePayload
+from kronicle.models.iso_datetime import IsoDateTime, now
+from kronicle.models.kronicable_type import KronicableTypeChecker
+from kronicle.models.kronicle_payload import COL_TO_PY_TYPE, KroniclePayload
 
 
 class SingleTypeField:
@@ -13,12 +15,16 @@ class SingleTypeField:
     pass
 
 
+ACCEPTABLE_PRIMITIVES = list(COL_TO_PY_TYPE.keys())
+
+
 class KronicableSample(BaseModel):
     """
     Base class for metrics that can be converted into a KroniclePayload.
 
-    Ensures that every field (regular or computed) has exactly one type
-    or is nullable (Optional[T]).
+    - Ensures that every field (regular or computed) has exactly one type
+      or is nullable (Optional[T]) or is a BaseModel/list/dict of BaseModels.
+    - Provides `to_row` for automatic payload serialization.
     """
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -27,37 +33,34 @@ class KronicableSample(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _check_field_types(cls, values):
-        # here = "sample._check_field_types"
-
         for name, field in cls.model_fields.items():
-            annotation = field.annotation
-            # origin = get_origin(annotation)
-            args = get_args(annotation)
-
-            # A field is a union if it has multiple args
-            if args:
-                # Check for Optional[T]
-                if type(None) in args:
-                    non_none = [a for a in args if a is not type(None)]
-                    if len(non_none) == 1:
-                        # Valid: Optional[T]
-                        continue
-
-                    # Invalid: Optional[A | B | ...]
-                    raise TypeError(
-                        f'For the class to be "Kronicable", a property "{name}" may be of type "T | None"'
-                        f" with T in {list(KroniclePayload.str_to_py_type_map().keys())}"
-                        f" and must not contain multiple types: {annotation}"
-                    )
-
-                # Pure union (A | B | ...)
-                raise TypeError(
-                    f'To be "Kronicable", a property "{name}" must have exactly one type '
-                    f" with T in {list(KroniclePayload.str_to_py_type_map().keys())}"
-                    f" or be Optional[T], not a union of multiple types: {annotation}"
-                )
-
+            kt = KronicableTypeChecker(field.annotation)
+            if not kt.is_valid():
+                raise TypeError(f'Field "{name}" has unsupported type for Kronicable: {kt.describe()}')
         return values
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # Row serialization
+    # ------------------------------------------------------------------------------------------------------------------
+    def to_row(self, include_fields: list[str] | None = None) -> dict[str, Any]:
+        """
+        Convert this object into a dictionary for KroniclePayload.
+        Nested BaseModel or list/dict of BaseModels is serialized to JSON.
+        """
+        row: dict[str, Any] = {}
+        fields = include_fields if include_fields else self.__dict__.keys()
+
+        for name in fields:
+            value = getattr(self, name)
+            if isinstance(value, BaseModel):
+                row[name] = value.model_dump_json()
+            elif isinstance(value, list) and all(isinstance(v, BaseModel) for v in value):
+                row[name] = dumps([v.model_dump() for v in value])
+            elif isinstance(value, dict) and all(isinstance(v, BaseModel) for v in value.values()):
+                row[name] = dumps({k: v.model_dump() for k, v in value.items()})
+            else:
+                row[name] = value
+        return row
 
     # ------------------------------------------------------------------------------------------------------------------
     # Methods to generate KroniclePayload
@@ -71,18 +74,13 @@ class KronicableSample(BaseModel):
 
         # Regular fields
         for name, field in self.__class__.model_fields.items():
-            typ = field.annotation
-            # Flatten Optional[T] -> T
-            origin = get_origin(typ)
-            args = get_args(typ)
-            if origin is Union and len(args) == 2 and type(None) in args:
-                typ = args[0] if args[1] is type(None) else args[1]
-
-            schema[name] = py_to_str.get(typ, "str")
+            kt = KronicableTypeChecker(field.annotation)
+            schema[name] = kt.to_kronicle_type()
 
         # Computed fields
         for name, field in self.__class__.model_computed_fields.items():
-            schema[name] = py_to_str.get(field.return_type, "str")
+            kt = KronicableTypeChecker(field.return_type)
+            schema[name] = kt.to_kronicle_type()
 
         return schema
 
@@ -91,24 +89,28 @@ class KronicableSample(BaseModel):
 # Example usage
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    from datetime import datetime
 
     from kronicle.utils.log import log_d
 
+    here = "KronicableSample.tests"
+
+    log_d(here)
+
     class TransferMetrics(KronicableSample):
-        start_time: datetime
-        end_time: datetime | None = None
+        start_time: IsoDateTime
+        end_time: IsoDateTime | None = None
         bytes_received: int = 0
         error: str | None = None
+        dico: dict[str, KronicableSample] | None = None
+        liste: list[KronicableSample] | None = None
+        liste2: list[str] | None = None
 
         @computed_field
         @property
         def success(self) -> bool:
             return self.error is None
 
-    here = "Test KronicableSample"
-
-    metrics = TransferMetrics(start_time=datetime.now(), bytes_received=12345)
+    metrics = TransferMetrics(start_time=now(), bytes_received=12345)
     schema = metrics.get_sensor_schema()
 
     log_d(here, "Sensor schema", schema)

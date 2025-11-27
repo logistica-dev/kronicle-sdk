@@ -1,23 +1,13 @@
 from typing import Any
 from uuid import UUID
 
-from pandas import DataFrame, DatetimeIndex, read_csv
+from pandas import DataFrame, DatetimeIndex, read_csv, to_datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
+from kronicle.models.kronicable_type import COL_TO_PY_TYPE, STR_TYPES, KronicableTypeChecker
 from kronicle.utils.log import log_d
 from kronicle.utils.str_utils import uuid4_str
-
-COL_TO_PY_TYPE = {
-    "str": str,
-    "int": int,
-    "float": float,
-    "bool": bool,
-    "datetime": IsoDateTime,  # custom subclass of datetime
-    "dict": dict,
-    "list": list,
-}
-STR_TYPES = COL_TO_PY_TYPE.keys()
 
 
 class KroniclePayload(BaseModel):
@@ -80,17 +70,32 @@ class KroniclePayload(BaseModel):
     @field_validator("sensor_schema")
     def _validate_schema(cls, schema):
         """
-        Ensure that the schema is a <column_name: column_type> dict with "column_type" containing
-        only recognized type labels.
+        Ensure that sensor_schema is a dict mapping column names to types
+        that are valid Kronicable types.
         """
         if schema is None:
             return None
         if not isinstance(schema, dict):
             raise TypeError("sensor_schema must be a dict")
 
-        invalid = {k: v for k, v in schema.items() if v not in STR_TYPES}
+        invalid = {}
+        for col, typ in schema.items():
+            # Convert string labels to Python types
+            if isinstance(typ, str):
+                py_type = COL_TO_PY_TYPE.get(typ)
+                if py_type is None:
+                    invalid[col] = typ
+                    continue
+            else:
+                py_type = typ  # assume already a Python type or KronicableTypeChecker-compatible
+
+            kt = KronicableTypeChecker(py_type)
+            if not kt.is_valid():
+                invalid[col] = typ
+
         if invalid:
             raise ValueError(f"Invalid schema types {invalid}; allowed: {sorted(STR_TYPES)}")
+
         return schema
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -138,24 +143,27 @@ class KroniclePayload(BaseModel):
         """
         Convert `columns` into a pandas.DataFrame.
 
+        Datetime columns (according to `sensor_schema`) are converted to UTC
+        to ensure compatibility with pandas' datetime64[ns, UTC] dtype.
+
         Returns
         -------
         DataFrame | None
             A DataFrame where each key of `columns` becomes a column.
-            If a column named "time" exists, it is converted into a DatetimeIndex.
+            The "time" column, if present, is used as DatetimeIndex.
 
         Raises
         ------
         ValueError
-            If `columns` has inconsistent column lengths.
+            If column lengths are inconsistent or datetime conversion fails.
         TypeError
-            If `columns` is not a mapping of lists.
+            If `columns` is not a dict of lists.
         """
         if self.columns is None:
             return None
 
         if not isinstance(self.columns, dict):
-            raise TypeError("columns must be a dict of lists")
+            raise TypeError("Columns must be a dict of lists")
 
         # Validate all columns are lists and have same length
         lengths = {len(v) for v in self.columns.values() if isinstance(v, list)}
@@ -164,12 +172,18 @@ class KroniclePayload(BaseModel):
 
         df = DataFrame(self.columns)
 
+        # Convert datetime columns to UTC
+        if self.sensor_schema:
+            datetime_cols = [col for col, typ in self.sensor_schema.items() if typ == "datetime"]
+            for col in datetime_cols:
+                if col in df.columns:
+                    df[col] = to_datetime(df[col], utc=True)
+
         # Special handling for "time" → datetime index
         if "time" in df.columns:
             try:
-                new_index = DatetimeIndex(df["time"])
+                df.index = DatetimeIndex(df["time"])
                 df = df.drop(columns=["time"])
-                df.index = new_index
             except Exception as e:
                 raise ValueError(f"Failed to interpret 'time' column as datetime: {e}") from e
 
@@ -192,11 +206,11 @@ class KroniclePayload(BaseModel):
         return cls(columns={col: df[col].tolist() for col in df.columns})
 
     @classmethod
-    def str_to_py_type_map(cls):
-        return COL_TO_PY_TYPE
+    def str_to_py_type_map(cls) -> dict:
+        return dict(COL_TO_PY_TYPE.items())
 
     @classmethod
-    def py_to_str_type_map(cls):
+    def py_to_str_type_map(cls) -> dict:
         return {val: key for key, val in COL_TO_PY_TYPE.items()}
 
 
