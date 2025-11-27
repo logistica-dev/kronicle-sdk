@@ -27,7 +27,7 @@ class KronicableSample(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _check_field_types(cls, values):
-        here = "sample._check_field_types"
+        # here = "sample._check_field_types"
 
         for name, field in cls.model_fields.items():
             annotation = field.annotation
