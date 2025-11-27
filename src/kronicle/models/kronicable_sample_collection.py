@@ -1,5 +1,7 @@
+from collections.abc import Sequence
 from typing import Any
 
+from kronicle.models.iso_datetime import now, now_local
 from kronicle.models.kronicable_sample import KronicableSample
 from kronicle.models.kronicle_payload import KroniclePayload
 
@@ -16,7 +18,7 @@ class KronicableSampleCollection:
     base_payload: KroniclePayload
     samples: list[KronicableSample]
 
-    def __init__(self, base_payload: KroniclePayload, sample_list: list[KronicableSample] | None = None):
+    def __init__(self, base_payload: KroniclePayload, sample_list: Sequence[KronicableSample] | None = None):
         """
         Initialize the collection with an optional initial list of samples.
 
@@ -28,7 +30,7 @@ class KronicableSampleCollection:
             Optional initial samples to add to the collection.
         """
         self.base_payload = base_payload
-        self.samples = sample_list if sample_list else []
+        self.samples = list(sample_list) if sample_list else []
         self._schema: dict[str, str] | None = None
 
     def add_sample(self, sample: KronicableSample):
@@ -112,9 +114,9 @@ if __name__ == "__main__":
     """
     Demonstration of KronicableSampleCollection usage.
     """
-    from datetime import datetime
     from uuid import uuid4
 
+    from kronicle.models.iso_datetime import IsoDateTime
     from kronicle.utils.log import log_d
 
     here = "Test KronicableSampleCollection"
@@ -123,8 +125,8 @@ if __name__ == "__main__":
     # Example KronicableSample subclass
     # -------------------------------
     class TransferSample(KronicableSample):
-        start_time: datetime
-        end_time: datetime | None = None
+        start_time: IsoDateTime
+        end_time: IsoDateTime | None = None
         bytes_received: int = 0
         error: str | None = None
 
@@ -147,8 +149,8 @@ if __name__ == "__main__":
     collection = KronicableSampleCollection(base_payload)
 
     # Add valid samples
-    s1 = TransferSample(start_time=datetime.now(), bytes_received=1000)
-    s2 = TransferSample(start_time=datetime.now(), bytes_received=2000, error="timeout")
+    s1 = TransferSample(start_time=now_local(), bytes_received=1000)
+    s2 = TransferSample(start_time=now_local(), bytes_received=2000, error="timeout")
     collection.add_sample_list([s1, s2])
 
     log_d(here, "Added samples:", collection.samples)
@@ -162,12 +164,12 @@ if __name__ == "__main__":
     # Test schema mismatch
     # -------------------------------
     class BadSample(KronicableSample):
-        start_time: datetime
-        end_time: datetime | None = None
+        start_time: IsoDateTime
+        end_time: IsoDateTime | None = None
         total_bytes: int = 0  # different field name
         error: str | None = None
 
-    bad_sample = BadSample(start_time=datetime.now(), total_bytes=50)
+    bad_sample = BadSample(start_time=now(), total_bytes=50)
 
     try:
         collection.add_sample(bad_sample)
