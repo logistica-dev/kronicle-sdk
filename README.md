@@ -28,7 +28,7 @@ pip install kronicle-sdk[pandas]
 Then
 
 ```python
-from kronicle-sdk import KronicleWriter
+from kronicle import KronicleWriter
 ```
 
 should work.
