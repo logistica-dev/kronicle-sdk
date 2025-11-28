@@ -194,6 +194,17 @@ class KronicleAbstractConnector(ABC):
         return self._request(delete, route=route, **params)
 
     # ------------------------------------------------------------------------------------------------------------------
+    # Health check
+    # ------------------------------------------------------------------------------------------------------------------
+    def is_alive(self):
+        res = self._parse(get(url=slash_join(self.url, "/health/live")), strict=False)
+        return isinstance(res, dict) and res.get("status") == "alive"
+
+    def is_ready(self):
+        res = self._parse(get(url=slash_join(self.url, "/health/ready")), strict=False)
+        return isinstance(res, dict) and res.get("status") == "ready"
+
+    # ------------------------------------------------------------------------------------------------------------------
     # Convenience API
     # ------------------------------------------------------------------------------------------------------------------
 

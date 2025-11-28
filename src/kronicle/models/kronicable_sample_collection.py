@@ -52,7 +52,7 @@ class KronicableSampleCollection:
                 raise ValueError(f"Sample schema mismatch: {sample_schema} != {self._schema}")
         self.samples.append(sample)
 
-    def add_sample_list(self, sample_list: list[KronicableSample]):
+    def add_sample_list(self, sample_list: Sequence[KronicableSample]):
         """
         Add multiple samples to the collection at once.
 
@@ -101,6 +101,9 @@ class KronicableSampleCollection:
         """
         if not self.samples:
             raise ValueError("No sample to convert")
+        if not self._schema:
+            # Should never happen
+            raise ValueError("No schema was provided")
 
         payload = KroniclePayload(
             **self.base_payload.model_dump(),
