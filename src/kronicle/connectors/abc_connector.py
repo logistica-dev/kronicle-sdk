@@ -68,7 +68,7 @@ class KronicleAbstractConnector(ABC):
                 f"Unexpected response format. Expected KroniclePayload or list[KroniclePayload], got: {response.content}"
             ) from exc
 
-        raise KronicleResponseError(f"Unexpected response type: {get_type( data)}; expected dict or list")
+        raise KronicleResponseError(f"Unexpected response type: {get_type(data)}; expected dict or list")
 
     def _request(
         self,
@@ -93,7 +93,7 @@ class KronicleAbstractConnector(ABC):
             KronicleConnectionError: If all retries fail
             TypeError: If body is not dict or KroniclePayload
         """
-        here = f"{get_type( self )}._request"
+        here = f"{get_type(self)}._request"
         url = self._join(route)
         json_body = None
 
@@ -104,7 +104,7 @@ class KronicleAbstractConnector(ABC):
                 payload = body
             else:
                 raise TypeError(f"Invalid body type: {get_type(body)}")
-            json_body = payload.model_dump()
+            json_body = payload.model_dump_json()
 
         last_exc = None
         for _ in range(self._retries):
@@ -292,7 +292,6 @@ class KronicleAbstractConnector(ABC):
 
 
 if __name__ == "__main__":
-
     here = "abstract Kronicle connector"
     log_d(here)
     try:
