@@ -130,7 +130,7 @@ class KronicleAbstractConnector(ABC):
             payload = KroniclePayload.from_json(body)
         else:
             raise TypeError(f"Invalid body type: {get_type(body)}")
-        return payload.model_dump(mode="json")
+        return payload.model_dump(mode="json", exclude_none=True)
 
     @classmethod
     def _ensure_is_payload(cls, res) -> KroniclePayload:
