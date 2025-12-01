@@ -1,11 +1,18 @@
-# kronicle/models/kronicable_types.py
+# kronicle/models/kronicable_type.py
+"""
+Defines KronicableTypeChecker which encapsulates the rules for which Python types
+are valid as Kronicable fields (for Kronicle metrics) and converts them to
+server-compatible type strings.
+"""
 
+from datetime import datetime
 from types import MappingProxyType, NoneType, UnionType
 from typing import Any, Final, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
 from kronicle.models.iso_datetime import IsoDateTime
+from kronicle.utils.log import log_w
 
 COL_TO_PY_TYPE: Final = MappingProxyType(
     {
@@ -13,26 +20,29 @@ COL_TO_PY_TYPE: Final = MappingProxyType(
         "int": int,
         "float": float,
         "bool": bool,
-        "datetime": IsoDateTime,  # custom subclass of datetime
+        "datetime": datetime,  # custom subclass of datetime
         "dict": dict,
         "list": list,
     }
 )
-STR_TYPES: Final = COL_TO_PY_TYPE.keys()
-PRIMITIVE_TYPES: Final = tuple(COL_TO_PY_TYPE.values())
-PRIMITIVE_TYPES_STR: Final = list(COL_TO_PY_TYPE.keys())
+STR_TYPES: Final = set(COL_TO_PY_TYPE.keys())
+
+EXT_COL_TO_PY_TYPE = COL_TO_PY_TYPE.copy()
+EXT_COL_TO_PY_TYPE["IsoDateTime"] = IsoDateTime
+
+EXT_STR_TYPES = set(EXT_COL_TO_PY_TYPE.keys())
+PRIMITIVE_TYPES: Final = tuple(EXT_COL_TO_PY_TYPE.values())
 
 
 class KronicableTypeChecker:
     """
-    Utility class encapsulating the rules that define whether a Python
-    type annotation is valid for usage inside a KronicableSample.
+    Validates Python type annotations or type strings as Kronicable types
+    for KroniclePayload schemas.
 
     A type is considered "Kronicable" if it belongs to one of the following:
         - a supported primitive type (str, int, float, bool, datetime, dict, list)
         - a Pydantic BaseModel subclass
-        - a list[T] where T is a BaseModel subclass
-        - a dict[str, T] where T is a BaseModel subclass
+        - list[T] or dict[str, T] where T is Kronicable
         - Optional[T] where T itself is Kronicable
 
     This validator is used to ensure that each field in a KronicableSample
@@ -47,7 +57,22 @@ class KronicableTypeChecker:
         Store a type annotation (such as int, Optional[str], list[Model], etc.)
         and expose methods to analyze it.
         """
-        self.annotation = annotation
+        self.optional = False
+
+        # --- Handle string annotation ---
+        if isinstance(annotation, str):
+            if annotation.startswith("optional[") and annotation.endswith("]"):
+                inner_str = annotation[9:-1]
+                if inner_str not in EXT_STR_TYPES:
+                    raise TypeError(f"Invalid type string: {annotation}")
+                self.annotation = EXT_COL_TO_PY_TYPE[inner_str]
+                self.optional = True
+            elif annotation in EXT_STR_TYPES:
+                self.annotation = EXT_COL_TO_PY_TYPE[annotation]
+            else:
+                raise TypeError(f"Invalid type string: {annotation}")
+        else:
+            self.annotation = annotation
 
     # ----------------------------------------------------
     # Classification helpers
@@ -56,12 +81,12 @@ class KronicableTypeChecker:
         """
         Return True if the annotation is Optional[T], meaning Union[T, NoneType].
         """
-        typ = self.annotation
-        origin = get_origin(typ)
-        # args = get_args(typ)
-        if origin is Union or origin is UnionType:
-            return NoneType in get_args(typ)
-        return False
+        if self.optional:
+            return True
+        origin = get_origin(self.annotation)
+        if origin in (Union, UnionType):
+            self.optional = NoneType in get_args(self.annotation)
+        return self.optional
 
     @property
     def inner_optional(self):
@@ -69,31 +94,25 @@ class KronicableTypeChecker:
         Return the inner non-None types from an Optional[T] annotation.
         Should return exactly one element for a valid Optional.
         """
+        # ---- string-based optional like "optional[int]"
+        if self.optional and get_origin(self.annotation) is None:
+            return self.annotation
+
+        # ---- union-based optionals
         args = [a for a in get_args(self.annotation) if a is not type(None)]
         if len(args) != 1:
-            raise TypeError(f"Optional annotation '{self.annotation}' must contain exactly one non-None type")
+            raise TypeError(
+                f"Optional annotation '{self.annotation}' must contain exactly one non-None type (not {len(args)})"
+            )
         return args[0]
 
     def is_primitive(self) -> bool:
-        """Return True if this type is considered primitive."""
-        # here = "is_primitive"
-        typ = self.annotation
-
-        # Unwrap Optional[T] for the check
-        if self.is_optional():
-            typ = self.inner_optional
-
-        # Only accept subclasses of types explicitly in PRIMITIVE_TYPES
-        if isinstance(typ, type):
-            if issubclass(typ, PRIMITIVE_TYPES):
-                return True
-
-        return False
+        """Return True if the type is a supported primitive."""
+        typ = self.inner_optional if self.is_optional() else self.annotation
+        return isinstance(typ, type) and issubclass(typ, PRIMITIVE_TYPES)
 
     def is_basemodel(self) -> bool:
-        """
-        Return True if the annotation is a subclass of Pydantic BaseModel.
-        """
+        """Return True if the annotation is a subclass of Pydantic BaseModel."""
         return isinstance(self.annotation, type) and issubclass(self.annotation, BaseModel)
 
     def is_valid_list(self) -> bool:
@@ -103,12 +122,9 @@ class KronicableTypeChecker:
         """
         origin = get_origin(self.annotation)
         args = get_args(self.annotation)
-        return (
-            origin is list
-            and len(args) == 1
-            and isinstance(t := args[0], type)
-            and (issubclass(t, BaseModel) or issubclass(t, PRIMITIVE_TYPES))
-        )
+        if origin is list and len(args) == 1 and isinstance(args[0], type):
+            return KronicableTypeChecker(args[0]).is_valid()
+        return False
 
     def is_valid_dict(self) -> bool:
         """
@@ -117,13 +133,9 @@ class KronicableTypeChecker:
         """
         origin = get_origin(self.annotation)
         args = get_args(self.annotation)
-        return (
-            origin is dict
-            and len(args) == 2
-            and args[0] is str
-            and isinstance(t := args[1], type)
-            and (issubclass(t, BaseModel) or issubclass(t, PRIMITIVE_TYPES))
-        )
+        if origin is dict and len(args) == 2 and args[0] is str and isinstance(args[1], type):
+            return KronicableTypeChecker(args[1]).is_valid()
+        return False
 
     # ----------------------------------------------------
     # Main rule: "Is this type acceptable for a Kronicable Sample?"
@@ -136,22 +148,12 @@ class KronicableTypeChecker:
         """
         # Optional[T] → validate inner T
         if self.is_optional():
-            inner = self.inner_optional
-            return KronicableTypeChecker(inner).is_valid()
-
-        # primitives
-        if self.is_primitive():
-            return True
-
-        # BaseModel
-        if self.is_basemodel():
-            return True
-
-        # list/dict of BaseModels
-        if self.is_valid_list() or self.is_valid_dict():
-            return True
-
-        return False
+            try:
+                return KronicableTypeChecker(self.inner_optional).is_valid()
+            except Exception as e:
+                log_w("KTChecker.is_valid", e)
+                return False
+        return self.is_primitive() or self.is_basemodel() or self.is_valid_list() or self.is_valid_dict()
 
     def to_kronicle_type(self) -> str:
         """
@@ -161,11 +163,12 @@ class KronicableTypeChecker:
         if not self.is_valid():
             raise TypeError(f"Type {self.annotation} is not Kronicable")
 
-        typ = self.annotation
-
         # unwrap Optional[T]
         if self.is_optional():
-            typ = self.inner_optional
+            inner_type = KronicableTypeChecker(self.inner_optional)
+            return f"optional[{inner_type.to_kronicle_type()}]"
+
+        typ = self.annotation
 
         # primitives
         for k, v in COL_TO_PY_TYPE.items():
@@ -186,9 +189,9 @@ class KronicableTypeChecker:
         # fallback
         return "str"
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Human-friendly error message
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def describe(self) -> str:
         """
         Return a human-friendly string describing the annotation.
@@ -205,54 +208,70 @@ class KronicableTypeChecker:
         return {val: key for key, val in COL_TO_PY_TYPE.items()}
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Example usage
-# ----------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
-    from datetime import datetime
     from typing import Optional
 
-    from pydantic import BaseModel
-
+    here = "test"
     print("\n=== KronicableTypeChecker test ===")
 
-    # --- Primitive tests ------------------------------------------------------
-    for t in (int, float, str, bool, datetime):
+    def print_kronicable(t: str | type | Union[Any, Any], t_name: str | None = None):
+        if not t_name:
+            try:
+                t_name = t.__name__  # type:ignore
+            except AttributeError:
+                t_name = str(t)
         kt = KronicableTypeChecker(t)
-        print(f"{t.__name__}: valid={kt.is_valid()}")
+        is_valid = kt.is_valid()
+        print(
+            "{:<15}->".format(t_name),
+            f"kronicable: {kt.to_kronicle_type()}" if is_valid else "n/a",
+        )
+
+    # --- Primitive tests ------------------------------------------------------
+    for t in (int, float, str, bool, datetime, "int", "float", "str", "bool", "datetime"):
+        print_kronicable(t)
 
     # --- Inheriting primitive tests -------------------------------------------
-    kt = KronicableTypeChecker(IsoDateTime)
-    print(f"{IsoDateTime.__name__}: valid={kt.is_valid()}")
-
-    # --- Optional primitive ---------------------------------------------------
-    kt_opt = KronicableTypeChecker(Optional[int])
-    print(f"Optional[int]: valid={kt_opt.is_valid()}")
+    print_kronicable(IsoDateTime)
 
     # --- BaseModel tests ------------------------------------------------------
     class Sub(BaseModel):
         x: int
 
-    kt_sub = KronicableTypeChecker(Sub)
-    print(f"Sub(BaseModel): valid={kt_sub.is_valid()}")
+    print_kronicable(Sub, "Sub(BaseModel)")
 
-    # --- list[BaseModel] ------------------------------------------------------
-    kt_list_sub = KronicableTypeChecker(list[Sub])
-    print(f"list[Sub]: valid={kt_list_sub.is_valid()}")
+    # --- Optional primitive ---------------------------------------------------
+    print_kronicable("optional[int]", "Optional[int]")
+    print_kronicable(Optional[int], "Optional[int]")
+    print_kronicable(Optional[Sub], "Optional[Sub]")
+    print_kronicable(str | None, "str | None")
+    print_kronicable(Sub | None, "Sub | None")
+
+    # --- list ------------------------------------------------------
+    print_kronicable(list, "list")
+    print_kronicable(list[str], "list[str]")
+    print_kronicable(list[int], "list[int]")
+    print_kronicable(list[Sub], "list[Sub]")
 
     # --- dict[str, BaseModel] -------------------------------------------------
-    kt_dict_sub = KronicableTypeChecker(dict[str, Sub])
-    print(f"dict[str, Sub]: valid={kt_dict_sub.is_valid()}")
+    print_kronicable(dict, "dict")
+    print_kronicable(dict[str, int], "dict[str, int]")
+    print_kronicable(dict[str, Sub], "dict[str, Sub]")
 
-    # --- invalid type ---------------------------------------------------------
+    # --- invalid types ---------------------------------------------------------
+    print("\n=== Not allowed ===\n")
+
     class NotAllowed:
         pass
 
-    kt_bad = KronicableTypeChecker(NotAllowed)
-    print(f"NotAllowed: valid={kt_bad.is_valid()}")
-
-    # --- complex nested Optional[list[Sub]] -----------------------------------
-    kt_nested = KronicableTypeChecker(Optional[list[Sub]])
-    print(f"Optional[list[Sub]]: valid={kt_nested.is_valid()}")
+    print_kronicable(Optional, "Optional")  # type: ignore
+    print_kronicable(list[Any], "list[Any]")
+    print_kronicable(dict[str, Any], "dict[str, Any]")
+    print_kronicable(Sub | str, "Sub | str")
+    print_kronicable(str | int | None, "str | int | None")
+    print_kronicable(NotAllowed)
 
     print("\n=== Done ===\n")

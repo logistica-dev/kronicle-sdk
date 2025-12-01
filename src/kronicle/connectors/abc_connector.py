@@ -32,9 +32,9 @@ class KronicleAbstractConnector(ABC):
     def prefix(self) -> str:
         raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', or 'setup/v1'.")
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Internal helpers
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
 
     def _join(self, route: str | None) -> str:
         """Join base URL, prefix, and route into a full URL."""
@@ -79,44 +79,54 @@ class KronicleAbstractConnector(ABC):
         **params,
     ) -> KroniclePayload | list[KroniclePayload]:
         """
-        Execute an HTTP request with retries and validate payload types.
+        Execute an HTTP request with retries and validated payload.
+
+        Retry only on connection-level errors; do not retry on HTTP 4xx/5xx
+        or malformed responses.
 
         Args:
-            method: requests HTTP method function (get, post, put, delete)
-            route: Kronicle route to call
-            body: Optional body to send (dict or KroniclePayload)
-            strict: True (default) if response should be validated as a
-                KroniclePayload or a list[KroniclePayload]
-            params: URL query parameters
+            method: requests HTTP method (get, post, put, delete, patch)
+            route: route path to append to base URL
+            body: optional payload (dict or KroniclePayload)
+            strict: validate the response as KroniclePayload(s)
+            params: URL query parameters or other requests kwargs
 
         Raises:
-            KronicleConnectionError: If all retries fail
-            TypeError: If body is not dict or KroniclePayload
+            KronicleConnectionError: all retries exhausted
+            KronicleHTTPError: HTTP 4xx/5xx response
+            KronicleResponseError: response not JSON or invalid format
+            TypeError: body type is invalid
         """
         here = f"{get_type(self)}._request"
         url = self._join(route)
-        if body is not None:
-            kwargs = params.copy()
-            kwargs["json"] = self._serialize_payload(body)
-        else:
-            kwargs = params
+        json_body = self._serialize_payload(body)
+
+        # Build kwargs without mutating user params
+        request_kwargs = params.copy()
+        if json_body is not None:
+            request_kwargs["json"] = json_body
 
         last_exc = None
-        for _ in range(self._retries):
+        for attempt in range(1, self._retries + 1):
             try:
-                response: Response = method(url=url, **kwargs)
+                response: Response = method(url=url, **request_kwargs)
+
                 if response.status_code >= 400:
                     raise KronicleHTTPError.from_response(response)
+
                 return self._parse(response=response, strict=strict)
+
             except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Don't retry on response errors
-                log_w(here, get_type(exc), exc)
+                # Non-retryable: malformed response or HTTP error
+                log_w(here, f"[attempt {attempt}] Non-retryable error:", exc)
                 raise exc
             except Exception as exc:
+                # Retryable: network error, timeout, etc.
                 last_exc = exc
+                log_w(here, f"[attempt {attempt}] Retryable exception:", exc)
                 sleep(self._delay)
 
-        raise KronicleConnectionError(f"Failed to connect to {url}") from last_exc
+        raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
 
     def _invalidate_cache(self):
         self._metadata_cache = None
@@ -165,9 +175,9 @@ class KronicleAbstractConnector(ABC):
             raise ValueError("Sensor ID missing")
         return check_is_uuid4(sensor_id)
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # HTTP verbs
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
 
     def get(self, route: str | None = None, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a GET request and return validated payload(s)."""
@@ -199,9 +209,9 @@ class KronicleAbstractConnector(ABC):
         self._invalidate_cache()
         return self._request(delete, route=route, **params)
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Health check
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def is_alive(self):
         res = self._parse(get(url=slash_join(self.url, "/health/live")), strict=False)
         return isinstance(res, dict) and res.get("status") == "alive"
@@ -210,9 +220,9 @@ class KronicleAbstractConnector(ABC):
         res = self._parse(get(url=slash_join(self.url, "/health/ready")), strict=False)
         return isinstance(res, dict) and res.get("status") == "ready"
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Convenience API
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
 
     def get_all_channels(self) -> list[KroniclePayload]:
         """Retrieve all channels as a list of KroniclePayload."""
@@ -251,7 +261,7 @@ class KronicleAbstractConnector(ABC):
         max_available_rows = 0
         channel_id = None
         for channel in self.all_channels:
-            if channel.available_rows > max_available_rows:
+            if channel.available_rows and channel.available_rows > max_available_rows:
                 max_available_rows = channel.available_rows
                 channel_id = channel.sensor_id
         if max_available_rows > 0:

@@ -1,4 +1,12 @@
 # kronicle/models/kronicle_payload.py
+"""
+KroniclePayload: central Data Transfer Object for Kronicle SDK.
+
+Delegates all type validation/normalization to KronicableTypeChecker.
+Allows users to provide `sensor_schema` as either:
+    - dict[str, str] (server-ready strings)
+    - dict[str, Python type | Optional[type]] (auto-normalized)
+"""
 from typing import Any
 from uuid import UUID
 
@@ -9,6 +17,8 @@ from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
 from kronicle.models.kronicable_type import COL_TO_PY_TYPE, STR_TYPES, KronicableTypeChecker
 from kronicle.utils.log import log_d
 from kronicle.utils.str_utils import uuid4_str
+
+ALLOWED_TYPE_STRS = set(list(COL_TO_PY_TYPE.keys()) + [f"optional[{t}]" for t in COL_TO_PY_TYPE.keys()])
 
 
 class KroniclePayload(BaseModel):
@@ -57,11 +67,11 @@ class KroniclePayload(BaseModel):
     available_data: int | None = None
     op_status: str | None = None
     op_details: dict[str, Any] | None = None
-    available_rows: int = 0
+    available_rows: int | None = None
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Validators
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     @model_validator(mode="after")
     def _populate_available_rows(self):
         if self.op_details and (available_rows := self.op_details.get("available_rows")):
@@ -79,36 +89,39 @@ class KroniclePayload(BaseModel):
         if not isinstance(schema, dict):
             raise TypeError("sensor_schema must be a dict")
 
+        normalized = {}
         invalid = {}
+
         for col, typ in schema.items():
-            # Convert string labels to Python types
-            if isinstance(typ, str):
-                py_type = COL_TO_PY_TYPE.get(typ)
-                if py_type is None:
+            try:
+                kt = KronicableTypeChecker(typ)
+                if not kt.is_valid():
                     invalid[col] = typ
                     continue
-            else:
-                py_type = typ  # assume already a Python type or KronicableTypeChecker-compatible
-
-            kt = KronicableTypeChecker(py_type)
-            if not kt.is_valid():
+                normalized[col] = kt.to_kronicle_type()
+            except Exception:
                 invalid[col] = typ
 
         if invalid:
             raise ValueError(f"Invalid schema types {invalid}; allowed: {sorted(STR_TYPES)}")
 
-        return schema
+        return normalized
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Constructors
-    # ------------------------------------------------------------------------------------------------------------------
-
+    # ----------------------------------------------------------------------------------------------
     @classmethod
     def from_json(cls, payload: dict):
         """
         Create a KroniclePayload from a Python dict
         (JS-style convenience wrapper around `model_validate`, which you may use instead).
         """
+        if schema := payload.get("sensor_schema"):
+            normalized = {}
+            for col, typ in schema.items():
+                kt = KronicableTypeChecker(typ)
+                normalized[col] = kt.to_kronicle_type()
+            payload["sensor_schema"] = normalized
         return cls.model_validate(payload)
 
     @classmethod
@@ -116,9 +129,13 @@ class KroniclePayload(BaseModel):
         """Create a KroniclePayload from a JSON string."""
         return cls.model_validate_json(payload)
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Serialization helpers
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
+    def to_json(self, **args) -> dict:
+        """Convert to a Python dict"""
+        return super().model_dump(**args)
+
     def model_dump(self, **args) -> dict:
         """Convert to a Python dict"""
         return super().model_dump(**args)
@@ -127,13 +144,17 @@ class KroniclePayload(BaseModel):
         """Convert to a JSON string"""
         return super().model_dump_json(indent=indent, **args)
 
+    def to_json_str(self, indent: int | None = 2, **args) -> str:
+        """Convert to a JSON string"""
+        return super().model_dump_json(indent=indent, **args)
+
     def __str__(self) -> str:
         """Convert to a (JSON) string"""
         return self.model_dump_json(indent=2, exclude_none=True)
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Data helpers
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def ensure_has_id(self) -> UUID:
         if self.sensor_id:
             return self.sensor_id
@@ -216,7 +237,7 @@ if __name__ == "__main__":
     payload_dict = {
         "sensor_id": uuid4_str(),
         "sensor_name": "temperature_sensor",
-        "sensor_schema": {"time": "datetime", "temperature": "float"},
+        "sensor_schema": {"time": "IsoDateTime", "temperature": "float", "pressure": "optional[float]"},
         "metadata": {"unit": "C"},
         "tags": {"test": True},
         "rows": [
@@ -229,6 +250,46 @@ if __name__ == "__main__":
         },
         "received_at": now_local(),
         "available_data": 2,
+        "op_status": "success",
+        "op_details": {"issued_at": now_local()},
+    }
+
+    log_d(here, "=== Creating KroniclePayload from dict ===")
+    payload = KroniclePayload.from_json(payload_dict)
+    log_d(here, payload)
+
+    log_d(here, "=== Accessing data_frame property ===")
+    df = payload.data_frame
+    log_d(here, df)
+
+    log_d(here, "=== Serializing back to JSON ===")
+    json_str = payload.model_dump_json()
+    log_d(here, json_str)
+
+    log_d(here, "=== Creating KroniclePayload from JSON string ===")
+    payload_from_str = KroniclePayload.from_str(json_str)
+    log_d(here, payload_from_str)
+
+    log_d(here, "=== Checking validation ===")
+    try:
+        bad_payload = KroniclePayload(sensor_schema={"time": "datetime", "temp": "unknown_type"})
+    except ValueError as e:
+        log_d(here, "Caught expected validation error:", e)
+
+    payload_dict = {
+        "sensor_id": uuid4_str(),
+        "sensor_name": "temperature_sensor",
+        "sensor_schema": {
+            "time": "datetime",
+            "temperature": float,  # Python type auto-normalized
+            "pressure": KronicableTypeChecker(float).to_kronicle_type(),  # can also wrap
+        },
+        "metadata": {"unit": "C"},
+        "tags": {"test": True},
+        "rows": [{"time": now_local(), "temperature": 21.5}],
+        "columns": {"time": [now_local()], "temperature": [21.5]},
+        "received_at": now_local(),
+        "available_data": 1,
         "op_status": "success",
         "op_details": {"issued_at": now_local()},
     }

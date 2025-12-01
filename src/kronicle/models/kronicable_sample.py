@@ -1,4 +1,4 @@
-# kronicle/models/kronicle_sample.py
+# kronicle/models/kronicable_sample.py
 from json import dumps
 from typing import Any
 
@@ -27,9 +27,9 @@ class KronicableSample(BaseModel):
     - Provides `to_row` for automatic payload serialization.
     """
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Validators
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     @model_validator(mode="before")
     @classmethod
     def _check_field_types(cls, values):
@@ -39,19 +39,32 @@ class KronicableSample(BaseModel):
                 raise TypeError(f'Field "{name}" has unsupported type for Kronicable: {kt.describe()}')
         return values
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Row serialization
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def to_row(self, include_fields: list[str] | None = None) -> dict[str, Any]:
         """
         Convert this object into a dictionary for KroniclePayload.
         Nested BaseModel or list/dict of BaseModels is serialized to JSON.
+        Fields with None values are omitted (optional fields not set).
         """
         row: dict[str, Any] = {}
         fields = include_fields if include_fields else self.__dict__.keys()
 
         for name in fields:
             value = getattr(self, name)
+            field_type = self.__class__.model_fields[name].annotation
+            kt = KronicableTypeChecker(field_type)
+
+            # Handle None values
+            if value is None:
+                if kt.is_optional():
+                    # Optional field not set → skip it
+                    continue
+                else:
+                    # Required field is None → raise error early
+                    raise ValueError(f"Field '{name}' is required but has value None")
+
             if isinstance(value, BaseModel):
                 row[name] = value.model_dump_json()
             elif isinstance(value, list) and all(isinstance(v, BaseModel) for v in value):
@@ -62,9 +75,9 @@ class KronicableSample(BaseModel):
                 row[name] = value
         return row
 
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     # Methods to generate KroniclePayload
-    # ------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------
     def get_sensor_schema(self) -> dict[str, str]:
         """
         Return a canonical sensor schema for the class, including computed fields.
@@ -113,3 +126,24 @@ if __name__ == "__main__":
     schema = metrics.get_sensor_schema()
 
     log_d(here, "Sensor schema", schema)
+
+    # --- 1. Proper instantiation with optional None ---
+    metrics = TransferMetrics(start_time=now())
+    row = metrics.to_row()
+    print("Row with optional None fields skipped:", row)
+    # Expected: 'end_time' and 'error' should NOT appear in row
+
+    # --- 2. Required field missing (simulate None after instantiation) ---
+    try:
+        metrics.start_time = None  # required field # type:ignore
+        metrics.to_row()
+    except ValueError as e:
+        print("Caught expected error for required field:", e)
+
+    # --- 3. Fill all fields ---
+    metrics.start_time = now()
+    metrics.end_time = None
+    metrics.error = "Some error"
+    row_full = metrics.to_row()
+    print("Row with some optional values set:", row_full)
+    # Expected: 'end_time' skipped, 'error' included
