@@ -126,7 +126,7 @@ class KronicleAbstractConnector(ABC):
             return None
         if isinstance(body, KroniclePayload):
             payload = body
-        if isinstance(body, dict):
+        elif isinstance(body, dict):
             payload = KroniclePayload.from_json(body)
         else:
             raise TypeError(f"Invalid body type: {get_type(body)}")
