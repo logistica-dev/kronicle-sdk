@@ -95,21 +95,16 @@ class KronicleAbstractConnector(ABC):
         """
         here = f"{get_type(self)}._request"
         url = self._join(route)
-        json_body = None
-
         if body is not None:
-            if isinstance(body, dict):
-                payload = KroniclePayload.from_json(body)
-            elif isinstance(body, KroniclePayload):
-                payload = body
-            else:
-                raise TypeError(f"Invalid body type: {get_type(body)}")
-            json_body = payload.model_dump(mode="json")
+            kwargs = params.copy()
+            kwargs["json"] = self._serialize_payload(body)
+        else:
+            kwargs = params
 
         last_exc = None
         for _ in range(self._retries):
             try:
-                response: Response = method(url=url, json=json_body, **params)
+                response: Response = method(url=url, **kwargs)
                 if response.status_code >= 400:
                     raise KronicleHTTPError.from_response(response)
                 return self._parse(response=response, strict=strict)
@@ -125,6 +120,17 @@ class KronicleAbstractConnector(ABC):
 
     def _invalidate_cache(self):
         self._metadata_cache = None
+
+    def _serialize_payload(self, body) -> dict | None:
+        if body is None:
+            return None
+        if isinstance(body, KroniclePayload):
+            payload = body
+        if isinstance(body, dict):
+            payload = KroniclePayload.from_json(body)
+        else:
+            raise TypeError(f"Invalid body type: {get_type(body)}")
+        return payload.model_dump(mode="json")
 
     @classmethod
     def _ensure_is_payload(cls, res) -> KroniclePayload:
