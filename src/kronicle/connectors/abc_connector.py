@@ -104,7 +104,7 @@ class KronicleAbstractConnector(ABC):
                 payload = body
             else:
                 raise TypeError(f"Invalid body type: {get_type(body)}")
-            json_body = payload.model_dump_json()
+            json_body = payload.model_dump(mode="json")
 
         last_exc = None
         for _ in range(self._retries):
