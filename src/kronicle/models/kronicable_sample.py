@@ -5,8 +5,7 @@ from typing import Any
 from pydantic import BaseModel, computed_field, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now
-from kronicle.models.kronicable_type import KronicableTypeChecker
-from kronicle.models.kronicle_payload import COL_TO_PY_TYPE
+from kronicle.models.kronicable_type import COL_TO_PY_TYPE, KronicableTypeChecker
 
 
 class SingleTypeField:
@@ -59,10 +58,10 @@ class KronicableSample(BaseModel):
             # Handle None values
             if value is None:
                 if kt.is_optional():
-                    # Optional field not set → skip it
+                    # Optional field not set -> skip it
                     continue
                 else:
-                    # Required field is None → raise error early
+                    # Required field is None -> raise error early
                     raise ValueError(f"Field '{name}' is required but has value None")
 
             if isinstance(value, BaseModel):

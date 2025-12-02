@@ -7,6 +7,7 @@ Allows users to provide `sensor_schema` as either:
     - dict[str, str] (server-ready strings)
     - dict[str, Python type | Optional[type]] (auto-normalized)
 """
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,11 +15,10 @@ from pandas import DataFrame, DatetimeIndex, read_csv, to_datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
-from kronicle.models.kronicable_type import COL_TO_PY_TYPE, STR_TYPES, KronicableTypeChecker
+from kronicle.models.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle.utils.log import log_d
-from kronicle.utils.str_utils import uuid4_str
 
-ALLOWED_TYPE_STRS = set(list(COL_TO_PY_TYPE.keys()) + [f"optional[{t}]" for t in COL_TO_PY_TYPE.keys()])
+mod = "KroniclePayload"
 
 
 class KroniclePayload(BaseModel):
@@ -60,7 +60,7 @@ class KroniclePayload(BaseModel):
     sensor_schema: dict[str, str] | None = None
     sensor_name: str | None = None
     metadata: dict[str, Any] | None = None
-    tags: dict[str, str | int | float | list] | None = None
+    tags: dict[str, str | int | float | bool | list | datetime] | None = None
     rows: list[dict[str, Any]] | None = None
     columns: dict[str, list] | None = None
     received_at: IsoDateTime | None = None
@@ -106,6 +106,57 @@ class KroniclePayload(BaseModel):
             raise ValueError(f"Invalid schema types {invalid}; allowed: {sorted(STR_TYPES)}")
 
         return normalized
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def normalize_tags(cls, tags):
+        """
+        Normalize tags to JSON-serializable values.
+
+        - datetime -> ISO8601 UTC string
+        - bool/int/float/str/list -> kept as is
+        - None -> ignored
+        - any other type -> converted to str(value)
+        - dictionaries as values are explicitly forbidden (ambiguous)
+        """
+
+        if tags is None:
+            return None
+
+        normalized_tags = {}
+
+        for key, value in tags.items():
+            # ignore null values
+            if value is None:
+                continue
+
+            # forbid nested mapping (not acceptable by server)
+            if isinstance(value, dict):
+                raise TypeError(
+                    f"Tag '{key}' has value {value!r} which is a dict and is not allowed:",
+                    " tag values must be JSON primitives or lists.",
+                )
+
+            # datetime -> isoformat
+            if isinstance(value, datetime):
+                normalized_tags[key] = value.astimezone().isoformat()
+                continue
+
+            # JSON-safe primitives or list
+            if isinstance(value, (str, int, float, bool, list)):
+                normalized_tags[key] = value
+                continue
+
+            # fallback: check __str__ exists and is callable
+            if hasattr(value, "__str__") and callable(value.__str__):
+                normalized_tags[key] = str(value)
+            else:
+                raise TypeError(
+                    f"Tag '{key}' has value {value!r} which cannot be serialized; "
+                    "it must be a primitive, list, datetime, or implement __str__."
+                )
+
+        return normalized_tags
 
     # ----------------------------------------------------------------------------------------------
     # Constructors
@@ -201,7 +252,7 @@ class KroniclePayload(BaseModel):
                 if col in df.columns:
                     df[col] = to_datetime(df[col], utc=True)
 
-        # Special handling for "time" → datetime index
+        # Special handling for "time" -> datetime index
         if "time" in df.columns:
             try:
                 df.index = DatetimeIndex(df["time"])
@@ -229,9 +280,10 @@ class KroniclePayload(BaseModel):
 
 
 if __name__ == "__main__":
+    from kronicle.utils.str_utils import tiny_id, uuid4_str
 
     here = "Kronicle payload"
-    # Example payload
+
     now1 = now_local()
     now2 = now_utc()
     payload_dict = {
@@ -315,3 +367,23 @@ if __name__ == "__main__":
         bad_payload = KroniclePayload(sensor_schema={"time": "datetime", "temp": "unknown_type"})
     except ValueError as e:
         log_d(here, "Caught expected validation error:", e)
+
+    sensor_id = uuid4_str()
+    sensor_name = f"demo_channel_{tiny_id()}"
+    now_tag = now_local()
+
+    payload = {
+        "sensor_id": sensor_id,
+        "sensor_name": sensor_name,
+        "sensor_schema": {"time": datetime, "temperature": float},
+        "metadata": {"unit": "°C"},
+        "tags": {"test": now_tag},
+        "rows": [
+            {"time": "2025-01-01T00:00:00Z", "temperature": 12.3},
+            {"time": "2025-01-01T00:01:00Z", "temperature": 12.8},
+        ],
+    }
+
+    log_d(here, "=== Creating KroniclePayload from dict ===")
+    kp = KroniclePayload.from_json(payload=payload)
+    log_d(here, kp)

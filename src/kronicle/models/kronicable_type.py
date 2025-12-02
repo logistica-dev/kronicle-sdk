@@ -146,7 +146,7 @@ class KronicableTypeChecker:
         Kronicle rules: primitives, BaseModels, lists/dicts of BaseModels,
         or Optional variants of the above.
         """
-        # Optional[T] → validate inner T
+        # Optional[T] -> validate inner T
         if self.is_optional():
             try:
                 return KronicableTypeChecker(self.inner_optional).is_valid()
@@ -175,14 +175,14 @@ class KronicableTypeChecker:
             if isinstance(typ, type) and issubclass(typ, v):
                 return k
 
-        # generic dict/list → map to "dict" / "list"
+        # generic dict/list -> map to "dict" / "list"
         origin = get_origin(typ)
         if origin is dict:
             return "dict"
         if origin is list:
             return "list"
 
-        # BaseModel subclasses → serialize as JSON string → "str"
+        # BaseModel subclasses -> serialize as JSON string -> "str"
         if isinstance(typ, type) and issubclass(typ, BaseModel):
             return "str"
 

@@ -170,7 +170,12 @@ class KronicleAbstractConnector(ABC):
         return body if isinstance(body, KroniclePayload) else KroniclePayload.from_json(body)
 
     def _ensure_payload_id(self, body: KroniclePayload | dict):
+        here = "abc_connector._ensure_payload_id"
+        log_d(here, "type(body)", type(body).__name__)
+        log_d(here, "body", body)
         payload = self._ensure_body_as_payload(body)
+        log_d(here, "kroniclePayload", payload)
+
         if not (sensor_id := payload.sensor_id):
             raise ValueError("Sensor ID missing")
         return check_is_uuid4(sensor_id)

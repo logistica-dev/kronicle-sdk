@@ -22,7 +22,7 @@ def rows_to_columns(rows: list[dict[str, Any]]) -> dict[str, list[Any]]:
     """
     Convert row-oriented data into column-oriented form.
     Example:
-        [{"a":1,"b":2}, {"a":3,"b":4}] → {"a":[1,3], "b":[2,4]}
+        [{"a":1,"b":2}, {"a":3,"b":4}] -> {"a":[1,3], "b":[2,4]}
     """
     cols = defaultdict(list)
     for row in rows:

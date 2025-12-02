@@ -2,6 +2,7 @@
 from typing import Any
 
 from kronicle.connectors.abc_connector import KronicleAbstractConnector
+from kronicle.models.iso_datetime import IsoDateTime
 from kronicle.models.kronicle_payload import KroniclePayload
 
 
@@ -23,21 +24,25 @@ class KronicleWriter(KronicleAbstractConnector):
 
     def insert_rows_and_upsert_channel(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
-        self._ensure_payload_id(body)
-        return self.post(route="channels", body=body)
+        payload = self._ensure_body_as_payload(body)
+        return self.post(route="channels", body=payload)
 
     def add_row(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
-        return self.insert_rows_and_upsert_channel(body)
+        payload = self._ensure_body_as_payload(body)
+        return self.insert_rows_and_upsert_channel(body=payload)
 
     def insert_rows(self, id, rows: list[dict[str, Any]]):
         """Insert rows for an existing sensor"""
         payload = KroniclePayload(sensor_id=id, rows=rows)
-        return self.post(f"channels/{id}/rows", body=payload.model_dump())
+        return self.post(f"channels/{id}/rows", body=payload)
 
 
 if __name__ == "__main__":
+
+    from kronicle.models.iso_datetime import now_local
     from kronicle.utils.log import log_d
+    from kronicle.utils.str_utils import tiny_id, uuid4_str
 
     here = "read Kronicle"
     log_d(here)
@@ -50,3 +55,22 @@ if __name__ == "__main__":
         for i, row in enumerate(rows):
             log_d(here, f"row {i}", row)
         log_d(here, "nb rows", len(rows))
+
+    sensor_id = uuid4_str()
+    sensor_name = f"demo_channel_{tiny_id()}"
+    now_tag = now_local()
+
+    payload = {
+        "sensor_id": sensor_id,
+        "sensor_name": sensor_name,
+        "sensor_schema": {"time": IsoDateTime, "temperature": float},
+        "metadata": {"unit": "°C"},
+        "tags": {"test": now_tag},
+        "rows": [
+            {"time": "2025-01-01T00:00:00Z", "temperature": 12.3},
+            {"time": "2025-01-01T00:01:00Z", "temperature": 12.8},
+        ],
+    }
+    log_d(here, "payload", payload)
+    result = kronicle_writer.insert_rows_and_upsert_channel(payload)
+    log_d(here, "result", result)
