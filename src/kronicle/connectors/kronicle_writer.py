@@ -44,7 +44,7 @@ if __name__ == "__main__":
     from kronicle.utils.log import log_d
     from kronicle.utils.str_utils import tiny_id, uuid4_str
 
-    here = "read Kronicle"
+    here = "KronicleWriter"
     log_d(here)
     kronicle_writer = KronicleWriter("http://127.0.0.1:8000")
     [log_d(here, f"Channel {channel.sensor_id}", channel) for channel in kronicle_writer.all_channels]

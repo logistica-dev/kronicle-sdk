@@ -43,7 +43,7 @@ class KronicableSampleCollection:
             If the sample schema does not match the existing collection schema.
         """
 
-        sample_schema = sample.get_sensor_schema()
+        sample_schema = sample.sensor_schema
         if self._schema is None:
             self._schema = sample_schema
         else:

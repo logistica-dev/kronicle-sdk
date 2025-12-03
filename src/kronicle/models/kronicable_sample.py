@@ -2,7 +2,7 @@
 from json import dumps
 from typing import Any
 
-from pydantic import BaseModel, computed_field, model_validator
+from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now
 from kronicle.models.kronicable_type import COL_TO_PY_TYPE, KronicableTypeChecker
@@ -26,6 +26,8 @@ class KronicableSample(BaseModel):
     - Provides `to_row` for automatic payload serialization.
     """
 
+    _hidden_field: str = PrivateAttr(default="If you need a hidden field, this is the way to declare it")
+
     # ----------------------------------------------------------------------------------------------
     # Validators
     # ----------------------------------------------------------------------------------------------
@@ -39,20 +41,50 @@ class KronicableSample(BaseModel):
         return values
 
     # ----------------------------------------------------------------------------------------------
+    # Methods to generate KroniclePayload
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def _fields(self):
+        return self.__class__.model_fields
+
+    @property
+    def _computed_fields(self):
+        return self.__class__.model_computed_fields
+
+    @property
+    def _all_fields(self):
+        return {**self._fields, **self._computed_fields}
+
+    @property
+    def sensor_schema(self) -> dict[str, str]:
+        """
+        Return a canonical sensor schema for the class, including computed fields.
+        """
+        schema: dict[str, str] = {}
+
+        # Regular fields:  declared_type = field.annotation
+        # Computed fields: declared_type = field.return_type
+        for name, field in self._all_fields.items():
+            declared_type = field.annotation if hasattr(field, "annotation") else field.return_type
+            kt = KronicableTypeChecker(declared_type)
+            schema[name] = kt.to_kronicle_type()
+
+        return schema
+
+    # ----------------------------------------------------------------------------------------------
     # Row serialization
     # ----------------------------------------------------------------------------------------------
-    def to_row(self, include_fields: list[str] | None = None) -> dict[str, Any]:
+    def to_row(self) -> dict[str, Any]:
         """
         Convert this object into a dictionary for KroniclePayload.
         Nested BaseModel or list/dict of BaseModels is serialized to JSON.
         Fields with None values are omitted (optional fields not set).
         """
         row: dict[str, Any] = {}
-        fields = include_fields if include_fields else self.__dict__.keys()
 
-        for name in fields:
+        for name, field in self._all_fields.items():
             value = getattr(self, name)
-            field_type = self.__class__.model_fields[name].annotation
+            field_type = field.annotation if hasattr(field, "annotation") else field.return_type
             kt = KronicableTypeChecker(field_type)
 
             # Handle None values
@@ -73,27 +105,6 @@ class KronicableSample(BaseModel):
             else:
                 row[name] = value
         return row
-
-    # ----------------------------------------------------------------------------------------------
-    # Methods to generate KroniclePayload
-    # ----------------------------------------------------------------------------------------------
-    def get_sensor_schema(self) -> dict[str, str]:
-        """
-        Return a canonical sensor schema for the class, including computed fields.
-        """
-        schema: dict[str, str] = {}
-
-        # Regular fields
-        for name, field in self.__class__.model_fields.items():
-            kt = KronicableTypeChecker(field.annotation)
-            schema[name] = kt.to_kronicle_type()
-
-        # Computed fields
-        for name, field in self.__class__.model_computed_fields.items():
-            kt = KronicableTypeChecker(field.return_type)
-            schema[name] = kt.to_kronicle_type()
-
-        return schema
 
 
 # ------------------------------------------------------------
@@ -122,7 +133,7 @@ if __name__ == "__main__":
             return self.error is None
 
     metrics = TransferMetrics(start_time=now(), bytes_received=12345)
-    schema = metrics.get_sensor_schema()
+    schema = metrics.sensor_schema
 
     log_d(here, "Sensor schema", schema)
 
