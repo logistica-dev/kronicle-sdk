@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from requests import Response
 
+from kronicle.utils.log import log_d
+
 
 class KronicleError(Exception):
     """Base class for all Kronicle SDK errors."""
@@ -29,7 +31,7 @@ class KronicleHTTPErrorModel(BaseModel):
     details: dict | None = None
     path: str
     method: str
-    request_id: str
+    request_id: str | None = None
 
 
 class KronicleHTTPError(KronicleError):
@@ -39,9 +41,10 @@ class KronicleHTTPError(KronicleError):
 
     @classmethod
     def from_response(cls, response: Response):
+        log_d("KronicleHTTPError.from_response", response.json())
         model = KronicleHTTPErrorModel(**response.json())
         return cls(model)
 
     def __str__(self):
         m = self.model
-        return f"{m.status} {m.error}: {m.message}\nfor request {m.method} {m.path}"
+        return f"{m.status} {m.error}: {m.message} from request {m.method} {m.path}"

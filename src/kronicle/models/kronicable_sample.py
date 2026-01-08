@@ -56,9 +56,9 @@ class KronicableSample(BaseModel):
         return {**self._fields, **self._computed_fields}
 
     @property
-    def sensor_schema(self) -> dict[str, str]:
+    def channel_schema(self) -> dict[str, str]:
         """
-        Return a canonical sensor schema for the class, including computed fields.
+        Return a canonical channel schema for the class, including computed fields.
         """
         schema: dict[str, str] = {}
 
@@ -133,9 +133,9 @@ if __name__ == "__main__":
             return self.error is None
 
     metrics = TransferMetrics(start_time=now(), bytes_received=12345)
-    schema = metrics.sensor_schema
+    schema = metrics.channel_schema
 
-    log_d(here, "Sensor schema", schema)
+    log_d(here, "Channel schema", schema)
 
     # --- 1. Proper instantiation with optional None ---
     metrics = TransferMetrics(start_time=now())

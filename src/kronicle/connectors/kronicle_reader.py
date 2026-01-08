@@ -26,9 +26,9 @@ if __name__ == "__main__":
     log_d(here, "is_alive", kronicle_reader.is_alive())
     log_d(here, "is_ready", kronicle_reader.is_ready())
     log_d(here, "nb channels", len(kronicle_reader.all_channels))
-    # chan_id, _ = kronicle_reader.get_channel_with_max_rows()
-    # if chan_id:
-    #     log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
+    chan_id, _ = kronicle_reader.get_channel_with_max_rows()
+    if chan_id:
+        log_d(here, "channel with max rows", kronicle_reader.get_channel(chan_id))
 
     # try:
     #     id = uuid4()

@@ -18,10 +18,6 @@ class KronicleWriter(KronicleAbstractConnector):
     def prefix(self) -> str:
         return "data/v1"
 
-    @property
-    def column_types(self):
-        return self.get(route="schemas/columns/types", strict=False)
-
     def insert_rows_and_upsert_channel(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         payload = self._ensure_body_as_payload(body)
@@ -33,8 +29,8 @@ class KronicleWriter(KronicleAbstractConnector):
         return self.insert_rows_and_upsert_channel(body=payload)
 
     def insert_rows(self, id, rows: list[dict[str, Any]]):
-        """Insert rows for an existing sensor"""
-        payload = KroniclePayload(sensor_id=id, rows=rows)
+        """Insert rows for an existing channel"""
+        payload = KroniclePayload(channel_id=id, rows=rows)
         return self.post(f"channels/{id}/rows", body=payload)
 
 
@@ -47,7 +43,7 @@ if __name__ == "__main__":
     here = "KronicleWriter"
     log_d(here)
     kronicle_writer = KronicleWriter("http://127.0.0.1:8000")
-    [log_d(here, f"Channel {channel.sensor_id}", channel) for channel in kronicle_writer.all_channels]
+    [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
     max_chan_id, _ = kronicle_writer.get_channel_with_max_rows()
     if max_chan_id:
         log_d(here, "channel with max rows", kronicle_writer.get_channel(max_chan_id))
@@ -56,14 +52,14 @@ if __name__ == "__main__":
             log_d(here, f"row {i}", row)
         log_d(here, "nb rows", len(rows))
 
-    sensor_id = uuid4_str()
-    sensor_name = f"demo_channel_{tiny_id()}"
+    channel_id = uuid4_str()
+    channel_name = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
 
     payload = {
-        "sensor_id": sensor_id,
-        "sensor_name": sensor_name,
-        "sensor_schema": {"time": IsoDateTime, "temperature": float},
+        "channel_id": channel_id,
+        "channel_name": channel_name,
+        "channel_schema": {"time": IsoDateTime, "temperature": float},
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},
         "rows": [

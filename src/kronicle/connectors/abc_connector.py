@@ -24,7 +24,7 @@ class KronicleAbstractConnector(ABC):
 
     def __init__(self, url: str = "http://127.0.0.1:8000"):
         self.url = url
-        self._retries: int = 5
+        self._retries: int = 2
         self._delay: int = 2
 
     @property
@@ -75,7 +75,9 @@ class KronicleAbstractConnector(ABC):
         method,
         route,
         body: KroniclePayload | dict | None = None,
+        *,
         strict: bool = True,
+        should_log: bool = False,
         **params,
     ) -> KroniclePayload | list[KroniclePayload]:
         """
@@ -109,21 +111,26 @@ class KronicleAbstractConnector(ABC):
         last_exc = None
         for attempt in range(1, self._retries + 1):
             try:
+                if should_log:
+                    method_str = f"{method}".split(" ")[1].upper()
+                    log_d(here, "Request", method_str, url)
                 response: Response = method(url=url, **request_kwargs)
+                if should_log:
+                    log_d(here, "Response", response.json())
 
-                if response.status_code >= 400:
+                if response.status_code and response.status_code >= 400:
                     raise KronicleHTTPError.from_response(response)
 
                 return self._parse(response=response, strict=strict)
 
             except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Non-retryable: malformed response or HTTP error
-                log_w(here, f"[attempt {attempt}] Non-retryable error:", exc)
+                # Non-retriable: malformed response or HTTP error
+                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
                 raise exc
             except Exception as exc:
-                # Retryable: network error, timeout, etc.
+                # retriable: network error, timeout, etc.
                 last_exc = exc
-                log_w(here, f"[attempt {attempt}] Retryable exception:", exc)
+                log_w(here, f"[attempt {attempt}] retriable exception", exc)
                 sleep(self._delay)
 
         raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
@@ -176,9 +183,9 @@ class KronicleAbstractConnector(ABC):
         payload = self._ensure_body_as_payload(body)
         log_d(here, "kroniclePayload", payload)
 
-        if not (sensor_id := payload.sensor_id):
-            raise ValueError("Sensor ID missing")
-        return check_is_uuid4(sensor_id)
+        if not (channel_id := payload.channel_id):
+            raise ValueError("Channel ID missing")
+        return check_is_uuid4(channel_id)
 
     # ----------------------------------------------------------------------------------------------
     # HTTP verbs
@@ -242,24 +249,24 @@ class KronicleAbstractConnector(ABC):
 
     @property
     def all_ids(self) -> list:
-        """Return all sensor IDs for existing channels."""
-        return [channel.sensor_id for channel in self.all_channels]
+        """Return all channel IDs for existing channels."""
+        return [channel.channel_id for channel in self.all_channels]
 
     def get_channel(self, id: UUID | str) -> KroniclePayload | None:
-        """Retrieve a channel by its sensor_id."""
+        """Retrieve a channel by its channel_id."""
         return self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
 
-    def get_channel_by_sensor_name(self, sensor_name):
+    def get_channel_by_channel_name(self, channel_name):
         """
-        Retrieve the first channel matching a sensor_name.
+        Retrieve the first channel matching a channel_name.
 
         Returns:
             KroniclePayload if found, else None.
         """
         for channel in self.all_channels:
-            if channel.sensor_name == sensor_name:
+            if channel.channel_name == channel_name:
                 return channel
-        log_d("get_channel_by_sensor_name", "Could not found any channel with name", sensor_name)
+        log_d("get_channel_by_channel_name", "Could not found any channel with name", channel_name)
         return
 
     def get_channel_with_max_rows(self) -> Tuple[UUID | None, int | None]:
@@ -268,7 +275,7 @@ class KronicleAbstractConnector(ABC):
         for channel in self.all_channels:
             if channel.available_rows and channel.available_rows > max_available_rows:
                 max_available_rows = channel.available_rows
-                channel_id = channel.sensor_id
+                channel_id = channel.channel_id
         if max_available_rows > 0:
             return channel_id, max_available_rows
         return None, None

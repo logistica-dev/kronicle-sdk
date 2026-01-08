@@ -3,10 +3,11 @@
 KroniclePayload: central Data Transfer Object for Kronicle SDK.
 
 Delegates all type validation/normalization to KronicableTypeChecker.
-Allows users to provide `sensor_schema` as either:
+Allows users to provide `channel_schema` as either:
     - dict[str, str] (server-ready strings)
     - dict[str, Python type | Optional[type]] (auto-normalized)
 """
+from collections import defaultdict
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -26,21 +27,21 @@ class KroniclePayload(BaseModel):
     Data transfer object for any response or request to the Kronicle.
 
     This structure centralizes all data that can be returned by the API for a
-    sensor, including metadata, tags, data rows, and column-oriented data.
+    channel, including metadata, tags, data rows, and column-oriented data.
 
     Fields
     ------
-    sensor_id : UUID | None
-        Unique identifier of the sensor.
-    sensor_schema : dict[str, str] | None
+    channel_id : UUID | None
+        Unique identifier of the channel.
+    channel_schema : dict[str, str] | None
         A dictionary mapping column names to type names (str, int, float, ...).
         Validated against a fixed set of allowed type labels.
-    sensor_name : str | None
-        Human-friendly identifier for the sensor.
+    channel_name : str | None
+        Human-friendly identifier for the channel.
     metadata : dict[str, Any] | None
-        Arbitrary metadata attached to the sensor.
+        Arbitrary metadata attached to the channel.
     tags : dict[str, str | int | float | list] | None
-        Tag set used for filtering and grouping sensors.
+        Tag set used for filtering and grouping channels.
     rows : list[dict[str, Any]] | None
         Row-oriented data, usually raw samples as received.
     columns : dict[str, list] | None
@@ -49,16 +50,16 @@ class KroniclePayload(BaseModel):
     received_at : IsoDateTime | None
         Timestamp (server-side) for when the payload was created or returned.
     available_data : int | None
-        Count or size of available data points for this sensor.
+        Count or size of available data points for this channel.
     op_status : str | None
         Operation status returned by write/update operations.
     op_details : dict[str, Any] | None
         Optional details attached to the operation result.
     """
 
-    sensor_id: UUID | None = None
-    sensor_schema: dict[str, str] | None = None
-    sensor_name: str | None = None
+    channel_id: UUID | None = None
+    channel_schema: dict[str, str] | None = None
+    channel_name: str | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, str | int | float | bool | list | datetime] | None = None
     rows: list[dict[str, Any]] | None = None
@@ -78,16 +79,16 @@ class KroniclePayload(BaseModel):
             self.available_rows = available_rows
         return self
 
-    @field_validator("sensor_schema")
+    @field_validator("channel_schema")
     def _validate_schema(cls, schema):
         """
-        Ensure that sensor_schema is a dict mapping column names to types
+        Ensure that channel_schema is a dict mapping column names to types
         that are valid Kronicable types.
         """
         if schema is None:
             return None
         if not isinstance(schema, dict):
-            raise TypeError("sensor_schema must be a dict")
+            raise TypeError("channel_schema must be a dict")
 
         normalized = {}
         invalid = {}
@@ -167,12 +168,12 @@ class KroniclePayload(BaseModel):
         Create a KroniclePayload from a Python dict
         (JS-style convenience wrapper around `model_validate`, which you may use instead).
         """
-        if schema := payload.get("sensor_schema"):
+        if schema := payload.get("channel_schema"):
             normalized = {}
             for col, typ in schema.items():
                 kt = KronicableTypeChecker(typ)
                 normalized[col] = kt.to_kronicle_type()
-            payload["sensor_schema"] = normalized
+            payload["channel_schema"] = normalized
         return cls.model_validate(payload)
 
     @classmethod
@@ -206,17 +207,35 @@ class KroniclePayload(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # Data helpers
     # ----------------------------------------------------------------------------------------------
+    def _rows_to_columns(self) -> dict[str, list[Any]] | None:
+        """
+        Convert row-oriented data into column-oriented form.
+        Example:
+            [{"a":1,"b":2}, {"a":3,"b":4}] → {"a":[1,3], "b":[2,4]}
+        """
+        if not self.rows:
+            return None
+        cols = defaultdict(list)
+        for row in self.rows:
+            for k, v in row.items():
+                cols[k].append(v)
+        self.columns = dict(cols)
+        return self.columns
+
     def ensure_has_id(self) -> UUID:
-        if self.sensor_id:
-            return self.sensor_id
-        raise ValueError("Sensor ID missing")
+        if self.channel_id:
+            return self.channel_id
+        raise ValueError("Channel ID missing")
+
+    def get_columns(self):
+        return self.columns if self.columns else self._rows_to_columns()
 
     @property
     def data_frame(self) -> DataFrame | None:
         """
         Convert `columns` into a pandas.DataFrame.
 
-        Datetime columns (according to `sensor_schema`) are converted to UTC
+        Datetime columns (according to `channel_schema`) are converted to UTC
         to ensure compatibility with pandas' datetime64[ns, UTC] dtype.
 
         Returns
@@ -232,7 +251,8 @@ class KroniclePayload(BaseModel):
         TypeError
             If `columns` is not a dict of lists.
         """
-        if self.columns is None:
+        if self.get_columns() is None:
+            log_d("KroniclePayload.data_frame", "no columns found for", self)
             return None
 
         if not isinstance(self.columns, dict):
@@ -246,8 +266,8 @@ class KroniclePayload(BaseModel):
         df = DataFrame(self.columns)
 
         # Convert datetime columns to UTC
-        if self.sensor_schema:
-            datetime_cols = [col for col, typ in self.sensor_schema.items() if typ == "datetime"]
+        if self.channel_schema:
+            datetime_cols = [col for col, typ in self.channel_schema.items() if typ == "datetime"]
             for col in datetime_cols:
                 if col in df.columns:
                     df[col] = to_datetime(df[col], utc=True)
@@ -287,9 +307,9 @@ if __name__ == "__main__":
     now1 = now_local()
     now2 = now_utc()
     payload_dict = {
-        "sensor_id": uuid4_str(),
-        "sensor_name": "temperature_sensor",
-        "sensor_schema": {"time": "IsoDateTime", "temperature": "float", "pressure": "optional[float]"},
+        "channel_id": uuid4_str(),
+        "channel_name": "temperature_channel",
+        "channel_schema": {"time": "IsoDateTime", "temperature": "float", "pressure": "optional[float]"},
         "metadata": {"unit": "C"},
         "tags": {"test": True},
         "rows": [
@@ -324,14 +344,14 @@ if __name__ == "__main__":
 
     log_d(here, "=== Checking validation ===")
     try:
-        bad_payload = KroniclePayload(sensor_schema={"time": "datetime", "temp": "unknown_type"})
+        bad_payload = KroniclePayload(channel_schema={"time": "datetime", "temp": "unknown_type"})
     except ValueError as e:
         log_d(here, "Caught expected validation error:", e)
 
     payload_dict = {
-        "sensor_id": uuid4_str(),
-        "sensor_name": "temperature_sensor",
-        "sensor_schema": {
+        "channel_id": uuid4_str(),
+        "channel_name": "temperature_channel",
+        "channel_schema": {
             "time": "datetime",
             "temperature": float,  # Python type auto-normalized
             "pressure": KronicableTypeChecker(float).to_kronicle_type(),  # can also wrap
@@ -364,18 +384,18 @@ if __name__ == "__main__":
 
     log_d(here, "=== Checking validation ===")
     try:
-        bad_payload = KroniclePayload(sensor_schema={"time": "datetime", "temp": "unknown_type"})
+        bad_payload = KroniclePayload(channel_schema={"time": "datetime", "temp": "unknown_type"})
     except ValueError as e:
         log_d(here, "Caught expected validation error:", e)
 
-    sensor_id = uuid4_str()
-    sensor_name = f"demo_channel_{tiny_id()}"
+    channel_id = uuid4_str()
+    channel_name = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
 
     payload = {
-        "sensor_id": sensor_id,
-        "sensor_name": sensor_name,
-        "sensor_schema": {"time": datetime, "temperature": float},
+        "channel_id": channel_id,
+        "channel_name": channel_name,
+        "channel_schema": {"time": datetime, "temperature": float},
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},
         "rows": [

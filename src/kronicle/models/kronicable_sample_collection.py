@@ -25,7 +25,7 @@ class KronicableSampleCollection:
         Parameters
         ----------
         base_payload : KroniclePayload
-            The base payload providing sensor metadata (sensor_id, name, etc.).
+            The base payload providing channel metadata (channel_id, name, etc.).
         sample_list : list[KronicableSample] | None
             Optional initial samples to add to the collection.
         """
@@ -43,7 +43,7 @@ class KronicableSampleCollection:
             If the sample schema does not match the existing collection schema.
         """
 
-        sample_schema = sample.sensor_schema
+        sample_schema = sample.channel_schema
         if self._schema is None:
             self._schema = sample_schema
         else:
@@ -109,7 +109,7 @@ class KronicableSampleCollection:
             **self.base_payload.model_dump(),
         )
         payload.rows = self.rows
-        payload.sensor_schema = self._schema
+        payload.channel_schema = self._schema
         return payload
 
 
@@ -141,8 +141,8 @@ if __name__ == "__main__":
     # Base payload
     # -------------------------------
     base_payload = KroniclePayload(
-        sensor_id=uuid4(),
-        sensor_name="transfer_sensor",
+        channel_id=uuid4(),
+        channel_name="transfer_channel",
         metadata={"unit": "bytes"},
     )
 
