@@ -15,8 +15,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator, model_validator
 
+from kronicle.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
-from kronicle.models.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle.utils.log import log_d
 
 mod = "KroniclePayload"

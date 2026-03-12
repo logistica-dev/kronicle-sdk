@@ -42,6 +42,10 @@ def strip_nulls(obj, recursive: bool = False):
     return obj
 
 
+def skip_nones(data: dict) -> dict:
+    return {k: v for k, v in data.items() if v is not None}
+
+
 if __name__ == "__main__":
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))

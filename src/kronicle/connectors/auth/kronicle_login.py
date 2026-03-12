@@ -1,14 +1,20 @@
 # kronicle/connectors/kronicle_login.py
 from json import loads
+from time import sleep
+from typing import Any, Callable
 
 from requests import Response, post
 
 from kronicle.conf.read_conf import Settings
 from kronicle.connectors.abc_connector import KronicleAbstractConnector
 from kronicle.models.iso_datetime import IsoDateTime
-from kronicle.models.kronicle_errors import KronicleConnectionError
-from kronicle.utils.log import log_d
-from kronicle.utils.str_utils import decode_b64url, slash_join
+from kronicle.models.kronicle_errors import (
+    KronicleConnectionError,
+    KronicleHTTPError,
+    KronicleResponseError,
+)
+from kronicle.utils.log import log_d, log_w
+from kronicle.utils.str_utils import decode_b64url, get_type, slash_join
 
 
 class KronicleUsrLogin(KronicleAbstractConnector):
@@ -64,6 +70,76 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             return False
         now = IsoDateTime.now_timestamp()
         return now < self.jwt_exp
+
+    def _request(
+        self,
+        method: Callable,
+        route: str | None = None,
+        body: Any | None = None,
+        *,
+        strict: bool = True,
+        should_log: bool = True,
+        **params,
+    ):
+        """
+        Execute an HTTP request with retries and validated payload.
+
+        Retry only on connection-level errors; do not retry on HTTP 4xx/5xx
+        or malformed responses.
+
+        Args:
+            method: requests HTTP method (get, post, put, delete, patch)
+            route: route path to append to base URL
+            body: optional payload (dict or KroniclePayload)
+            strict: validate the response as KroniclePayload(s)
+            params: URL query parameters or other requests kwargs
+
+        Raises:
+            KronicleConnectionError: all retries exhausted
+            KronicleHTTPError: HTTP 4xx/5xx response
+            KronicleResponseError: response not JSON or invalid format
+            TypeError: body type is invalid
+        """
+        here = f"{get_type(self)}.request"
+        url = self._join(route)
+        method_str = self.method_str(method)
+
+        json_body = self._serialize_payload(body)
+        headers = {"Authorization": f"Bearer {self.jwt}"}
+
+        # Build kwargs without mutating user params
+        request_kwargs = params.copy()
+        if json_body is not None:
+            request_kwargs["json"] = json_body
+
+        last_exc = None
+        for attempt in range(1, self._retries + 1):
+            try:
+                if should_log:
+                    log_d(here, "Request", method_str, url)
+                response: Response = method(url=url, headers=headers, **request_kwargs)
+                if should_log:
+                    log_d(here, "Response", response.json())
+
+                if response.status_code and response.status_code == 422:
+                    raise KronicleHTTPError.from_pydantic_response(response, path=url, method=method_str)
+                if response.status_code and response.status_code >= 400:
+                    raise KronicleHTTPError.from_response(response, path=url, method=method_str)
+
+                return self._parse(response=response, strict=strict)
+
+            except (KronicleResponseError, KronicleHTTPError) as exc:
+                # Non-retriable: malformed response or HTTP error
+                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
+                raise exc
+            except Exception as exc:
+                # retriable: network error, timeout, etc.
+                log_d(here, "type(exc)", type(exc))
+                last_exc = exc
+                log_w(here, f"[attempt {attempt}] retriable exception", exc)
+                sleep(self._delay)
+
+        raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
 
 
 if __name__ == "__main__":  # pragma: no cover

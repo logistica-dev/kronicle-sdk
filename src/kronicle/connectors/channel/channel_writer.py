@@ -3,8 +3,8 @@ from typing import Any
 
 from kronicle.conf.read_conf import Settings
 from kronicle.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
+from kronicle.models.data.kronicle_payload import KroniclePayload
 from kronicle.models.iso_datetime import IsoDateTime
-from kronicle.models.kronicle_payload import KroniclePayload
 
 
 class KronicleWriter(KronicleAbstractChannelConnector):

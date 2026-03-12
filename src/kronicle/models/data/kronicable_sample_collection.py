@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from typing import Any
 
+from kronicle.models.data.kronicable_sample import KronicableSample
+from kronicle.models.data.kronicle_payload import KroniclePayload
 from kronicle.models.iso_datetime import now, now_local
-from kronicle.models.kronicable_sample import KronicableSample
-from kronicle.models.kronicle_payload import KroniclePayload
 
 
 class KronicableSampleCollection:

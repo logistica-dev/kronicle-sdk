@@ -1,13 +1,12 @@
 # kronicle/connectors/abc_connector.py
 from abc import ABC, abstractmethod
 from time import sleep
-from typing import Any, Callable, Literal, Tuple
-from uuid import UUID
+from typing import Any, Callable
 
 from requests import Response, delete, get, patch, post, put
 
+from kronicle.models.data.kronicle_payload import KroniclePayload
 from kronicle.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
-from kronicle.models.kronicle_payload import KroniclePayload
 from kronicle.utils.log import log_d, log_w
 from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
@@ -34,6 +33,10 @@ class KronicleAbstractConnector(ABC):
     # ----------------------------------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def method_str(method: Callable) -> str:
+        return method.__name__.upper()
+        # return f"{method}".split(" ")[1].upper()
 
     def _join(self, route: str | None) -> str:
         """Join base URL, prefix, and route into a full URL."""
@@ -86,8 +89,9 @@ class KronicleAbstractConnector(ABC):
         """
         here = f"{get_type(self)}.req"
         url = self._join(route)
+        method_str = self.method_str(method)
+
         json_body = self._serialize_payload(body)
-        method_str = method.__name__.upper()
         # Build kwargs without mutating user params
         request_kwargs = params.copy()
         if json_body is not None:
@@ -103,7 +107,7 @@ class KronicleAbstractConnector(ABC):
                     log_d(here, "Response", response.json())
 
                 if response.status_code and response.status_code >= 400:
-                    raise KronicleHTTPError.from_response(response)
+                    raise KronicleHTTPError.from_response(response, path=url, method=method_str)
 
                 return self._parse(response=response, strict=strict)
 
@@ -213,88 +217,6 @@ class KronicleAbstractConnector(ABC):
     def is_ready(self):
         res = self._parse(get(url=slash_join(self.url, "/health/ready")), strict=False)
         return isinstance(res, dict) and res.get("status") == "ready"
-
-    # ----------------------------------------------------------------------------------------------
-    # Convenience API
-    # ----------------------------------------------------------------------------------------------
-
-    def get_all_channels(self) -> list[KroniclePayload]:
-        """Retrieve all channels as a list of KroniclePayload."""
-        return self._ensure_is_payload_list(self.get(route="channels"))
-
-    @property
-    def all_channels(self) -> list[KroniclePayload]:
-        """Return all channels."""
-        if not hasattr(self, "_metadata_cache") or self._metadata_cache is None:
-            self._metadata_cache = self.get_all_channels()
-        return self._metadata_cache
-
-    @property
-    def all_ids(self) -> list:
-        """Return all channel IDs for existing channels."""
-        return [channel.channel_id for channel in self.all_channels]
-
-    def get_channel(self, id: UUID | str) -> KroniclePayload | None:
-        """Retrieve a channel by its channel_id."""
-        return self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
-
-    def get_channel_by_channel_name(self, channel_name):
-        """
-        Retrieve the first channel matching a channel_name.
-
-        Returns:
-            KroniclePayload if found, else None.
-        """
-        for channel in self.all_channels:
-            if channel.channel_name == channel_name:
-                return channel
-        log_d("get_channel_by_channel_name", "Could not found any channel with name", channel_name)
-        return
-
-    def get_channel_with_max_rows(self) -> Tuple[UUID | None, int | None]:
-        max_available_rows = 0
-        channel_id = None
-        for channel in self.all_channels:
-            if channel.available_rows and channel.available_rows > max_available_rows:
-                max_available_rows = channel.available_rows
-                channel_id = channel.channel_id
-        if max_available_rows > 0:
-            return channel_id, max_available_rows
-        return None, None
-
-    def get_rows_for_channel(
-        self, id: UUID | str, return_type: Literal["str", "df", "dict", "list"] = "list"
-    ) -> str | list[dict[str, Any]] | None:
-        """
-        Retrieve the rows of a channel in specified format.
-
-        Args:
-            return_type: 'dict' returns raw rows, 'str' returns string repr.
-        """
-        result = self._ensure_is_payload(self.get(route=f"channels/{check_is_uuid4(id)}/rows"))
-        match return_type:
-            case "str":
-                return str(result.rows)
-            case "list" | "dict":
-                return result.rows
-        raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
-
-    def get_cols_for_channel(self, id: UUID | str, return_type: Literal["str", "df", "dict", "list"] = "dict"):
-        """
-        Retrieve the columns of a channel in specified format.
-
-        Args:
-            return_type: 'dict' returns raw columns, 'str' returns string repr.
-        """
-        result = self.get(route=f"channels/{check_is_uuid4(id)}/columns")
-        assert isinstance(result, KroniclePayload)
-
-        match return_type:
-            case "str":
-                return str(result.columns)
-            case "dict" | "list":
-                return result.columns
-        raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
 
 if __name__ == "__main__":

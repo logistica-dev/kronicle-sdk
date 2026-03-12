@@ -1,15 +1,13 @@
 # kronicle/connectors/channel/abc_channel_connector.py
 from abc import abstractmethod
-from time import sleep
-from typing import Any, Literal, Tuple
+from typing import Any, Callable, Literal, Tuple
 from uuid import UUID
 
 from requests import Response, delete, get, patch, post, put
 
-from kronicle.connectors.abc_connector import KronicleAbstractConnector
 from kronicle.connectors.auth.kronicle_login import KronicleUsrLogin
-from kronicle.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
-from kronicle.models.kronicle_payload import KroniclePayload
+from kronicle.models.data.kronicle_payload import KroniclePayload
+from kronicle.models.kronicle_errors import KronicleResponseError
 from kronicle.utils.log import log_d, log_w
 from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
@@ -67,8 +65,8 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
 
     def _request(
         self,
-        method,
-        route,
+        method: Callable,
+        route: str | None = None,
         body: KroniclePayload | dict | None = None,
         *,
         strict: bool = True,
@@ -94,42 +92,14 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             KronicleResponseError: response not JSON or invalid format
             TypeError: body type is invalid
         """
-        here = f"{get_type(self)}._request"
-        url = self._join(route)
-        json_body = self._serialize_payload(body)
-        headers = {"Authorization": f"Bearer {self.jwt}"}
-
-        # Build kwargs without mutating user params
-        request_kwargs = params.copy()
-        if json_body is not None:
-            request_kwargs["json"] = json_body
-
-        last_exc = None
-        for attempt in range(1, self._retries + 1):
-            try:
-                if should_log:
-                    method_str = f"{method}".split(" ")[1].upper()
-                    log_d(here, "Request", method_str, url)
-                response: Response = method(url=url, headers=headers, **request_kwargs)
-                if should_log:
-                    log_d(here, "Response", response.json())
-
-                if response.status_code and response.status_code >= 400:
-                    raise KronicleHTTPError.from_response(response)
-
-                return self._parse(response=response, strict=strict)
-
-            except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Non-retriable: malformed response or HTTP error
-                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
-                raise exc
-            except Exception as exc:
-                # retriable: network error, timeout, etc.
-                last_exc = exc
-                log_w(here, f"[attempt {attempt}] retriable exception", exc)
-                sleep(self._delay)
-
-        raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
+        return super()._request(
+            method=method,
+            route=route,
+            body=body,
+            strict=strict,
+            should_log=should_log,
+            **params,
+        )
 
     def _invalidate_cache(self):
         self._metadata_cache = None
@@ -315,7 +285,7 @@ if __name__ == "__main__":
     here = "abstract Kronicle connector"
     log_d(here)
     try:
-        kronicle = KronicleAbstractConnector("http://127.0.0.1:8000")  # type: ignore
+        kronicle = KronicleAbstractChannelConnector("http://127.0.0.1:8000")  # type: ignore
     except TypeError as e:
         log_w(here, "WARNING", e)
     log_d(here, "^^^ There should be a warning above ^^^")

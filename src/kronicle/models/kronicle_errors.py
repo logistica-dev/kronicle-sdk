@@ -1,8 +1,6 @@
 from pydantic import BaseModel
 from requests import Response
 
-from kronicle.utils.log import log_d
-
 
 class KronicleError(Exception):
     """Base class for all Kronicle SDK errors."""
@@ -40,9 +38,22 @@ class KronicleHTTPError(KronicleError):
         super().__init__(str(self))
 
     @classmethod
-    def from_response(cls, response: Response):
-        log_d("KronicleHTTPError.from_response", response.json())
-        model = KronicleHTTPErrorModel(**response.json())
+    def from_response(cls, response: Response, path: str, method: str):
+        res_json = response.json()
+        model = KronicleHTTPErrorModel(**res_json)
+        return cls(model)
+
+    @classmethod
+    def from_pydantic_response(cls, response: Response, path: str, method: str):
+        res_json = response.json()
+        model = KronicleHTTPErrorModel(
+            status=response.status_code or 400,
+            path=path,
+            method=method,
+            error="UnprocessableContent",
+            message="Incorrect payload",
+            details=res_json.get("detail"),
+        )
         return cls(model)
 
     def __str__(self):
