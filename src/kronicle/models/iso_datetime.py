@@ -66,6 +66,10 @@ class IsoDateTime(datetime):
         return cls.now_local().strftime("%Y-%m-%d %H:%M:%S")
 
     @classmethod
+    def now_timestamp(cls) -> float:
+        return cls.now_utc().timestamp()
+
+    @classmethod
     def to_iso_datetime(cls, dt: datetime) -> IsoDateTime:
         if isinstance(dt, IsoDateTime):
             return dt

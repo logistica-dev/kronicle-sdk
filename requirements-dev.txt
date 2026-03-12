@@ -1,0 +1,14 @@
+black
+build
+commitizen
+ipykernel
+pip-chill
+pip-autoremove
+pip-upgrade-outdated
+pre-commit
+pyright
+pytest-asyncio
+pytest-cov
+ruff
+tomli
+twine

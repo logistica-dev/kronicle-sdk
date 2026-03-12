@@ -1,10 +1,8 @@
-from configparser import ConfigParser, ExtendedInterpolation
 from hashlib import md5, sha256, sha512
 from json import dump, load
 from os import makedirs, stat
 from os.path import abspath, exists, expanduser
 from pathlib import Path
-from time import time
 from typing import Literal
 
 
@@ -151,13 +149,6 @@ def read_json_file(file_path, mode: Literal["b", "t"] = "t"):  # pragma: no cove
         return load(json_file_content)
 
 
-def read_ini_conf(file_path):
-    check_is_file(file_path)
-    config_reader = ConfigParser(interpolation=ExtendedInterpolation())
-    config_reader.read(file_path)
-    return config_reader
-
-
 def write_file(destination_file_path: str, content, mode: Literal["b", "t"] = "t"):  # pragma: no cover
     """
 
@@ -189,22 +180,3 @@ def write_json_file(destination_file_path: str, json_dict):  # pragma: no cover
 #     @staticmethod
 #     def from_json(o):
 #         pass
-
-
-if __name__ == "__main__":  # pragma: no cover
-    tests = "FileUtils"
-    begin = time()
-
-    # test_file_dir = "../tests/_test_files/"
-    # yaml_file_path = test_file_dir + "RUDI producer internal API - 1.3.0.yml"
-    # right_path = test_file_dir + "unicorn.png"
-    # bin_file = test_file_dir + "WERTSTOFFE.m8s"
-    # tar_gz_file = test_file_dir + "rudi-node-read.tar.gz"
-    # txt_file = test_file_dir + "RUDI producer internal API - 1.3.0.yml"
-    # csv_file = test_file_dir + "dummy.csv"
-    # wrong_path = test_file_dir + "toto"
-    # unicode_file_path = test_file_dir + "unicode_chars.txt"
-    # write_file(unicode_file_path, "tut0156êµîƒﬁÌπÏ“{ëôøÇ¡¶{µœ≤é≤")
-    ini_file = "../.conf/config.ini"
-    conf = read_ini_conf(ini_file)
-    print("url:", conf.get("db", "DB_URL"))

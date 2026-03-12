@@ -1,22 +1,24 @@
-# connectors/kronicle_writer.py
+# kronicle/connectors/channel/kronicle_writer.py
 from typing import Any
 
-from kronicle.connectors.abc_connector import KronicleAbstractConnector
+from kronicle.conf.read_conf import Settings
+from kronicle.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
 from kronicle.models.iso_datetime import IsoDateTime
 from kronicle.models.kronicle_payload import KroniclePayload
 
 
-class KronicleWriter(KronicleAbstractConnector):
+class KronicleWriter(KronicleAbstractChannelConnector):
     """
     SDK to push and read data on a Kronicle
     """
 
-    def __init__(self, url):
-        super().__init__(url)
+    #
+    def __init__(self, url: str, usr: str, pwd: str):
+        super().__init__(url, usr, pwd)
 
     @property
     def prefix(self) -> str:
-        return "data/v1"
+        return "/data/v1"
 
     def insert_rows_and_upsert_channel(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
@@ -35,14 +37,14 @@ class KronicleWriter(KronicleAbstractConnector):
 
 
 if __name__ == "__main__":
-
     from kronicle.models.iso_datetime import now_local
     from kronicle.utils.log import log_d
     from kronicle.utils.str_utils import tiny_id, uuid4_str
 
     here = "KronicleWriter"
     log_d(here)
-    kronicle_writer = KronicleWriter("http://127.0.0.1:8000")
+    co = Settings().connection
+    kronicle_writer = KronicleWriter(co.url, co.usr, co.pwd)
     [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
     max_chan_id, _ = kronicle_writer.get_channel_with_max_rows()
     if max_chan_id:

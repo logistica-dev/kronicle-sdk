@@ -47,4 +47,8 @@ class KronicleHTTPError(KronicleError):
 
     def __str__(self):
         m = self.model
-        return f"{m.status} {m.error}: {m.message} from request {m.method} {m.path}"
+        return (
+            f"{m.status} {m.error}: {m.message} "
+            + f"({m.details if m.details else None}) "
+            + f"from request {m.method} {m.path}"
+        )

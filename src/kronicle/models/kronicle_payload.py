@@ -7,12 +7,12 @@ Allows users to provide `channel_schema` as either:
     - dict[str, str] (server-ready strings)
     - dict[str, Python type | Optional[type]] (auto-normalized)
 """
+
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pandas import DataFrame, DatetimeIndex, read_csv, to_datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 from kronicle.models.iso_datetime import IsoDateTime, now_local, now_utc
@@ -192,11 +192,11 @@ class KroniclePayload(BaseModel):
         """Convert to a Python dict"""
         return super().model_dump(**args)
 
-    def model_dump_json(self, indent: int | None = 2, **args) -> str:
+    def model_dump_json(self, indent: int | None = None, **args) -> str:
         """Convert to a JSON string"""
         return super().model_dump_json(indent=indent, **args)
 
-    def to_json_str(self, indent: int | None = 2, **args) -> str:
+    def to_json_str(self, indent: int | None = None, **args) -> str:
         """Convert to a JSON string"""
         return super().model_dump_json(indent=indent, **args)
 
@@ -230,74 +230,6 @@ class KroniclePayload(BaseModel):
     def get_columns(self):
         return self.columns if self.columns else self._rows_to_columns()
 
-    @property
-    def data_frame(self) -> DataFrame | None:
-        """
-        Convert `columns` into a pandas.DataFrame.
-
-        Datetime columns (according to `channel_schema`) are converted to UTC
-        to ensure compatibility with pandas' datetime64[ns, UTC] dtype.
-
-        Returns
-        -------
-        DataFrame | None
-            A DataFrame where each key of `columns` becomes a column.
-            The "time" column, if present, is used as DatetimeIndex.
-
-        Raises
-        ------
-        ValueError
-            If column lengths are inconsistent or datetime conversion fails.
-        TypeError
-            If `columns` is not a dict of lists.
-        """
-        if self.get_columns() is None:
-            log_d("KroniclePayload.data_frame", "no columns found for", self)
-            return None
-
-        if not isinstance(self.columns, dict):
-            raise TypeError("Columns must be a dict of lists")
-
-        # Validate all columns are lists and have same length
-        lengths = {len(v) for v in self.columns.values() if isinstance(v, list)}
-        if len(lengths) > 1:
-            raise ValueError(f"Column lists have inconsistent lengths: {lengths}")
-
-        df = DataFrame(self.columns)
-
-        # Convert datetime columns to UTC
-        if self.channel_schema:
-            datetime_cols = [col for col, typ in self.channel_schema.items() if typ == "datetime"]
-            for col in datetime_cols:
-                if col in df.columns:
-                    df[col] = to_datetime(df[col], utc=True)
-
-        # Special handling for "time" -> datetime index
-        if "time" in df.columns:
-            try:
-                df.index = DatetimeIndex(df["time"])
-                df = df.drop(columns=["time"])
-            except Exception as e:
-                raise ValueError(f"Failed to interpret 'time' column as datetime: {e}") from e
-
-        return df
-
-    def to_csv(self, path: str | None = None, **kwargs) -> str | None:
-        """Return CSV string or save to file if path is given."""
-        df = self.data_frame
-        if df is None:
-            return None
-        if path:
-            df.to_csv(path, **kwargs)
-            return None
-        return df.to_csv(**kwargs)
-
-    @classmethod
-    def from_csv(cls, csv_path: str, **kwargs) -> "KroniclePayload":
-        """Load columns from a CSV file and build a KroniclePayload."""
-        df = read_csv(csv_path, **kwargs)
-        return cls(columns={col: df[col].tolist() for col in df.columns})
-
 
 if __name__ == "__main__":
     from kronicle.utils.str_utils import tiny_id, uuid4_str
@@ -329,10 +261,6 @@ if __name__ == "__main__":
     log_d(here, "=== Creating KroniclePayload from dict ===")
     payload = KroniclePayload.from_json(payload_dict)
     log_d(here, payload)
-
-    log_d(here, "=== Accessing data_frame property ===")
-    df = payload.data_frame
-    log_d(here, df)
 
     log_d(here, "=== Serializing back to JSON ===")
     json_str = payload.model_dump_json()
@@ -369,10 +297,6 @@ if __name__ == "__main__":
     log_d(here, "=== Creating KroniclePayload from dict ===")
     payload = KroniclePayload.from_json(payload_dict)
     log_d(here, payload)
-
-    log_d(here, "=== Accessing data_frame property ===")
-    df = payload.data_frame
-    log_d(here, df)
 
     log_d(here, "=== Serializing back to JSON ===")
     json_str = payload.model_dump_json()

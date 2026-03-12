@@ -1,8 +1,10 @@
 from datetime import datetime
-from os import getenv
 from time import time
 
-SHOULD_LOG = bool(getenv("RUDI_NODE_DEV"))
+from kronicle.utils.str_utils import enforce_length
+
+SHOULD_LOG = True
+HERE_LEN = 15
 
 
 def _now() -> str:
@@ -13,15 +15,19 @@ def log(*args):  # pragma: no cover
     if SHOULD_LOG:
         if len(args) < 2:
             print(f"D {_now()}")
-        elif len(args) == 2:
-            print(f"{args[0]} {_now()} [{args[1]}] <")
-        elif len(args) == 3:
-            print(f"{args[0]} {_now()} [{args[1]}] {args[2]}")
-        else:
-            try:
-                print(f"{args[0]} {_now()} [{args[1]}] {args[2]}:", *args[3:])
-            except UnicodeDecodeError:
-                print(f"{args[0]} {_now()} [{args[1]}] {args[2]}:", str(*args[3:]))
+            return
+        start_line = f"{args[0]} {_now()} [{enforce_length(args[1], HERE_LEN)}]"
+        if len(args) == 2:
+            print(f"{start_line} <")
+            return
+        if len(args) == 3:
+            print(f"{start_line} {args[2]}")
+            return
+        start_line = f"{start_line} {args[2]}:"
+        try:
+            print(f"{start_line}", *args[3:])
+        except UnicodeDecodeError:
+            print(f"{start_line}", str(*args[3:]))
 
 
 def log_e(*args):  # pragma: no cover

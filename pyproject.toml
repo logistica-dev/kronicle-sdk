@@ -23,7 +23,7 @@ classifiers = [
 keywords = ["Kronicle", "Kronicle SDK", "Univ. Rennes", "IRISA"]
 
 # ------ Dependencies
-dependencies = ["pandas>=2.3.3", "requests>=2.32.5", "pydantic>=2.12.4"]
+dependencies = ["requests>=2.32.5", "pydantic>=2.12.5"]
 
 [project.urls]
 Homepage = "https://github.com/logistica-dev/kronicle-sdk"
@@ -31,7 +31,6 @@ Documentation = "https://github.com/logistica-dev/kronicle-sdk/blob/latest_branc
 Repository = "https://github.com/logistica-dev/kronicle-sdk"
 
 [project.optional-dependencies]
-pandas = ["pandas>=2.0"]
 dev = ["build>=1.3.0", "pre-commit>=4.5.0", "ruff"]
 test = ["ipykernel", "pytest", "pytest-cov"]
 

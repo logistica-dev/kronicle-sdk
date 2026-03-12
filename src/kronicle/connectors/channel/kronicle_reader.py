@@ -1,20 +1,21 @@
-# connectors/kronicle_reader.py
+# kronicle/connectors/channel/kronicle_reader.py
 
 
-from kronicle.connectors.abc_connector import KronicleAbstractConnector
+from kronicle.conf.read_conf import Settings
+from kronicle.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
 
 
-class KronicleReader(KronicleAbstractConnector):
+class KronicleReader(KronicleAbstractChannelConnector):
     """
     Reads channels on a Kronicle microservice
     """
 
-    def __init__(self, url: str = "http://127.0.0.1:8000"):
-        super().__init__(url)
+    def __init__(self, url: str, usr: str, pwd: str):
+        super().__init__(url, usr, pwd)
 
     @property
     def prefix(self) -> str:
-        return "api/v1"
+        return "/api/v1"
 
 
 if __name__ == "__main__":
@@ -22,7 +23,8 @@ if __name__ == "__main__":
 
     here = "read Kronicle"
     log_d(here)
-    kronicle_reader = KronicleReader("http://127.0.0.1:8000")
+    co = Settings().connection
+    kronicle_reader = KronicleReader(co.url, co.usr, co.pwd)
     log_d(here, "is_alive", kronicle_reader.is_alive())
     log_d(here, "is_ready", kronicle_reader.is_ready())
     log_d(here, "nb channels", len(kronicle_reader.all_channels))

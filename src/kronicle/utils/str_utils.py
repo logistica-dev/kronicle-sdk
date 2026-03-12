@@ -1,3 +1,4 @@
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime
 from random import choices
 from re import compile, sub
@@ -6,6 +7,10 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 
 REGEX_UUID = compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+
+
+def enforce_length(here: str, length=12) -> str:
+    return here.ljust(length, " ") if len(here) < length else here[0:length]
 
 
 def slash_join(*args) -> str:
@@ -41,7 +46,7 @@ def uuid4_str() -> str:
 def tiny_id(n: int = 8) -> str:
     if n < 1:
         n = 8
-    return uuid4_str().replace("-", "")[0:n]
+    return uuid4().hex[0:n]
 
 
 def is_uuid_v4(id: str | UUID) -> bool:
@@ -108,6 +113,49 @@ TimeSpec = Literal["seconds", "milliseconds", "microseconds"]
 
 def now_iso_str(timespec: TimeSpec = "seconds") -> str:
     return datetime.now().astimezone().isoformat(timespec=timespec)
+
+
+# --------------------------------------------------------------------------------------------------
+# Base 64 strings
+# --------------------------------------------------------------------------------------------------
+def pad_b64_str(jwt_base64url: str) -> str:
+    """Adds equal signs at the end of the string for its length to reach a multiple of 4"""
+    jwt_str_length = len(jwt_base64url)
+    _, mod = divmod(jwt_str_length, 4)
+    return jwt_base64url if mod == 0 else jwt_base64url.ljust(jwt_str_length + 4 - mod, "=")
+
+
+def is_base64_url(sb) -> bool:
+    """
+    Check if an input is urlsafe-base64 encoded
+    :param sb: a string or a bytes
+    source: https://stackoverflow.com/a/45928164
+    """
+    try:
+        if isinstance(sb, str):
+            # If there's any unicode here, an exception will be thrown and the function will return false
+            sb_bytes = bytes(sb, "ascii")
+        elif isinstance(sb, bytes):
+            sb_bytes = sb
+        else:
+            raise ValueError("Argument must be string or bytes")
+        return urlsafe_b64encode(urlsafe_b64decode(sb_bytes)) == sb_bytes
+    except Exception:
+        return False
+
+
+def encode_b64url(s: str) -> str:
+    return urlsafe_b64encode(s.encode("utf-8")).decode("utf-8")
+
+
+def decode_b64url(b64_str: str) -> str:
+    padded_str = pad_b64_str(b64_str)
+    if not is_base64_url(padded_str):
+        raise ValueError("Input string should be encoded in base64url")
+    try:
+        return urlsafe_b64decode(padded_str).decode("utf-8")
+    except Exception as e:
+        raise ValueError("Input string is not properly encoded in base64url") from e
 
 
 if __name__ == "__main__":

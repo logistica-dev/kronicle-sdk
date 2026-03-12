@@ -1,18 +1,20 @@
-# kronicle/connectors/abc_connector.py
-from abc import ABC, abstractmethod
+# kronicle/connectors/channel/abc_channel_connector.py
+from abc import abstractmethod
 from time import sleep
-from typing import Any, Callable, Literal, Tuple
+from typing import Any, Literal, Tuple
 from uuid import UUID
 
 from requests import Response, delete, get, patch, post, put
 
+from kronicle.connectors.abc_connector import KronicleAbstractConnector
+from kronicle.connectors.auth.kronicle_login import KronicleUsrLogin
 from kronicle.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
 from kronicle.models.kronicle_payload import KroniclePayload
 from kronicle.utils.log import log_d, log_w
 from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
-class KronicleAbstractConnector(ABC):
+class KronicleAbstractChannelConnector(KronicleUsrLogin):
     """
     Abstract class that implements generic connection
     methods towards Kronicle.
@@ -21,25 +23,19 @@ class KronicleAbstractConnector(ABC):
     url: Base URL of the Kronicle server.
     """
 
-    def __init__(self, url: str = "http://127.0.0.1:8000"):
-        self.url = url
-        self._retries: int = 2
-        self._delay: int = 2
+    def __init__(self, url: str, usr: str, pwd: str):
+        super().__init__(url, usr, pwd)
 
     @property
     @abstractmethod
     def prefix(self) -> str:
-        raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', 'setup/v1', 'auth/v1'...")
+        raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', or 'setup/v1'.")
 
     # ----------------------------------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------------------------------
 
-    def _join(self, route: str | None) -> str:
-        """Join base URL, prefix, and route into a full URL."""
-        return slash_join(self.url, self.prefix, route)
-
-    def _parse(self, response: Response, **params) -> Any:
+    def _parse(self, response: Response, *, strict=True, **params) -> KroniclePayload | list[KroniclePayload]:
         """
         Parse a requests.Response object into validated KroniclePayload(s).
 
@@ -53,18 +49,32 @@ class KronicleAbstractConnector(ABC):
         except Exception as exc:
             raise KronicleResponseError(f"Failed to decode JSON: {response.content}") from exc
 
-        return data
+        if not strict:
+            return data
+
+        try:
+            if isinstance(data, dict):
+                return KroniclePayload.from_json(data)
+
+            if isinstance(data, list):
+                return [KroniclePayload.from_json(d) for d in data]
+        except Exception as exc:
+            raise KronicleResponseError(
+                f"Unexpected response format. Expected KroniclePayload or list[KroniclePayload], got: {response.content}"
+            ) from exc
+
+        raise KronicleResponseError(f"Unexpected response type: {get_type(data)}; expected dict or list")
 
     def _request(
         self,
-        method: Callable,
-        route: str | None,
+        method,
+        route,
         body: KroniclePayload | dict | None = None,
         *,
         strict: bool = True,
         should_log: bool = False,
         **params,
-    ) -> Any:
+    ) -> KroniclePayload | list[KroniclePayload]:
         """
         Execute an HTTP request with retries and validated payload.
 
@@ -84,10 +94,11 @@ class KronicleAbstractConnector(ABC):
             KronicleResponseError: response not JSON or invalid format
             TypeError: body type is invalid
         """
-        here = f"{get_type(self)}.req"
+        here = f"{get_type(self)}._request"
         url = self._join(route)
         json_body = self._serialize_payload(body)
-        method_str = method.__name__.upper()
+        headers = {"Authorization": f"Bearer {self.jwt}"}
+
         # Build kwargs without mutating user params
         request_kwargs = params.copy()
         if json_body is not None:
@@ -97,8 +108,9 @@ class KronicleAbstractConnector(ABC):
         for attempt in range(1, self._retries + 1):
             try:
                 if should_log:
+                    method_str = f"{method}".split(" ")[1].upper()
                     log_d(here, "Request", method_str, url)
-                response: Response = method(url=url, **request_kwargs)
+                response: Response = method(url=url, headers=headers, **request_kwargs)
                 if should_log:
                     log_d(here, "Response", response.json())
 
@@ -126,12 +138,12 @@ class KronicleAbstractConnector(ABC):
         if body is None:
             return None
         if isinstance(body, KroniclePayload):
-            payload = body.model_dump(mode="json", exclude_none=True)
-        elif isinstance(body, dict):
             payload = body
+        elif isinstance(body, dict):
+            payload = KroniclePayload.from_json(body)
         else:
             raise TypeError(f"Invalid body type: {get_type(body)}")
-        return payload
+        return payload.model_dump(mode="json", exclude_none=True)
 
     @classmethod
     def _ensure_is_payload(cls, res) -> KroniclePayload:
@@ -175,30 +187,32 @@ class KronicleAbstractConnector(ABC):
     # HTTP verbs
     # ----------------------------------------------------------------------------------------------
 
-    def get(self, route: str | None = None, **params) -> Any:
+    def get(self, route: str | None = None, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a GET request and return validated payload(s)."""
         return self._request(get, route=route, **params)
 
-    def post(self, route: str | None = None, body: KroniclePayload | dict | None = None, **params) -> Any:
+    def post(
+        self, route: str | None = None, body: KroniclePayload | dict | None = None, **params
+    ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a POST request with validation."""
         self._invalidate_cache()
         return self._request(post, route=route, body=body, **params)
 
-    def put(self, route: str, body: KroniclePayload | dict, **params) -> Any:
+    def put(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
         self._invalidate_cache()
         return self._request(put, route=route, body=body, **params)
 
-    def patch(self, route: str, body: KroniclePayload | dict, **params) -> Any:
+    def patch(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
         self._invalidate_cache()
         return self._request(patch, route=route, body=body, **params)
 
-    def delete(self, route: str, **params) -> Any:
+    def delete(self, route: str, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a DELETE request and return validated payload(s)."""
         self._invalidate_cache()
         return self._request(delete, route=route, **params)
