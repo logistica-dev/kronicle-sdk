@@ -38,8 +38,8 @@ class KronicleRbacConnector(KronicleUsrLogin):
         return KronicleUser(**usr)
 
     # def get_user(self, id):
-    def update_user(self, user: KronicleUser) -> KronicleUser:
-        usr = self.put(route="/users", body=user.to_json())
+    def patch_user(self, user: KronicleUser) -> KronicleUser:
+        usr = self.patch(route="/users", body=user.to_json())
         return KronicleUser(**usr)
 
     # def get_user(self, id):
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         full_name="Dave Bond II",
         # password="Wonderful_Secrets_123403657",
     )
-    res = kronicle_rbac.update_user(usr2)
+    res = kronicle_rbac.patch_user(usr2)
     log_d(here, "Updated", res)
     res = kronicle_rbac.delete_user(usr2)
     log_d(here, "Deleted", res)
