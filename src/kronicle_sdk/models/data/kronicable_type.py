@@ -9,10 +9,9 @@ from datetime import datetime
 from types import MappingProxyType, NoneType, UnionType
 from typing import Any, Final, Union, get_args, get_origin
 
+from kronicle_sdk.models.iso_datetime import IsoDateTime
+from kronicle_sdk.utils.log import log_w
 from pydantic import BaseModel
-
-from kronicle.models.iso_datetime import IsoDateTime
-from kronicle.utils.log import log_w
 
 COL_TO_PY_TYPE: Final = MappingProxyType(
     {

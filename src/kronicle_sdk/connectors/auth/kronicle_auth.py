@@ -5,16 +5,16 @@ from typing import Any, Callable
 
 from requests import Response, post
 
-from kronicle.conf.read_conf import Settings
-from kronicle.connectors.abc_connector import KronicleAbstractConnector
-from kronicle.models.iso_datetime import IsoDateTime
-from kronicle.models.kronicle_errors import (
+from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
+from kronicle_sdk.models.iso_datetime import IsoDateTime
+from kronicle_sdk.models.kronicle_errors import (
     KronicleConnectionError,
     KronicleHTTPError,
     KronicleResponseError,
 )
-from kronicle.utils.log import log_d, log_w
-from kronicle.utils.str_utils import decode_b64url, get_type, slash_join
+from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.str_utils import decode_b64url, get_type, slash_join
 
 
 class KronicleUsrLogin(KronicleAbstractConnector):

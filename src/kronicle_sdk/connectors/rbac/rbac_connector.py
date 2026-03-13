@@ -1,7 +1,7 @@
-from kronicle.conf.read_conf import Settings
-from kronicle.connectors.auth.kronicle_auth import KronicleUsrLogin
-from kronicle.models.rbac.kronicle_user import KronicleUser
-from kronicle.utils.log import log_d, log_w
+from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
+from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
+from kronicle_sdk.utils.log import log_d, log_w
 
 
 class KronicleRbacConnector(KronicleUsrLogin):

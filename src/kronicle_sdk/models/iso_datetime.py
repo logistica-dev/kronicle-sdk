@@ -158,9 +158,8 @@ if __name__ == "__main__":
     here = "iso_datetime.test"
     from time import sleep
 
+    from kronicle_sdk.utils.log import log_d
     from pydantic import BaseModel
-
-    from kronicle.utils.log import log_d
 
     log_d(here, "=== iso_datetime.py main test ===")
 

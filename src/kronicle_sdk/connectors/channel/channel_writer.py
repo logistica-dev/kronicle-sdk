@@ -1,10 +1,10 @@
 # kronicle/connectors/channel/kronicle_writer.py
 from typing import Any
 
-from kronicle.conf.read_conf import Settings
-from kronicle.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
-from kronicle.models.data.kronicle_payload import KroniclePayload
-from kronicle.models.iso_datetime import IsoDateTime
+from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
+from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.iso_datetime import IsoDateTime
 
 
 class KronicleWriter(KronicleAbstractChannelConnector):
@@ -37,9 +37,9 @@ class KronicleWriter(KronicleAbstractChannelConnector):
 
 
 if __name__ == "__main__":
-    from kronicle.models.iso_datetime import now_local
-    from kronicle.utils.log import log_d
-    from kronicle.utils.str_utils import tiny_id, uuid4_str
+    from kronicle_sdk.models.iso_datetime import now_local
+    from kronicle_sdk.utils.log import log_d
+    from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
     here = "KronicleWriter"
     log_d(here)

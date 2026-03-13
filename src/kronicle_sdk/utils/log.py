@@ -1,7 +1,7 @@
 from datetime import datetime
 from time import time
 
-from kronicle.utils.str_utils import enforce_length
+from kronicle_sdk.utils.str_utils import enforce_length
 
 SHOULD_LOG = True
 HERE_LEN = 15

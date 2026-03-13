@@ -4,9 +4,9 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from kronicle.utils.conf_utils import read_ini_conf
-from kronicle.utils.file_utils import is_file
-from kronicle.utils.log import log_d, log_w
+from kronicle_sdk.utils.conf_utils import read_ini_conf
+from kronicle_sdk.utils.file_utils import is_file
+from kronicle_sdk.utils.log import log_d, log_w
 
 
 @dataclass

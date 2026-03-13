@@ -6,8 +6,8 @@ import random
 from datetime import datetime, timedelta
 from typing import Optional
 
-from kronicle.models.iso_datetime import IsoDateTime
-from kronicle.utils.log import log_d
+from kronicle_sdk.models.iso_datetime import IsoDateTime
+from kronicle_sdk.utils.log import log_d
 
 
 class DateGenerator:

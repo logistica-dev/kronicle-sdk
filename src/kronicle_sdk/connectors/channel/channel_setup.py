@@ -1,13 +1,13 @@
 # kronicle/connectors/channel/kronicle_setup.py
 from uuid import UUID
 
-from kronicle.conf.read_conf import Settings
-from kronicle.connectors.channel.channel_writer import KronicleWriter
-from kronicle.models.data.kronicle_payload import KroniclePayload
-from kronicle.models.iso_datetime import now_local
-from kronicle.models.kronicle_errors import KronicleOperationError
-from kronicle.utils.log import log_w
-from kronicle.utils.str_utils import tiny_id, uuid4_str
+from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
+from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.iso_datetime import now_local
+from kronicle_sdk.models.kronicle_errors import KronicleOperationError
+from kronicle_sdk.utils.log import log_w
+from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
 class KronicleSetup(KronicleWriter):
@@ -56,7 +56,7 @@ class KronicleSetup(KronicleWriter):
 
 
 if __name__ == "__main__":
-    from kronicle.utils.log import log_d
+    from kronicle_sdk.utils.log import log_d
 
     here = "ksetup"
     log_d(here)

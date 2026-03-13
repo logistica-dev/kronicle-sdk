@@ -1,8 +1,8 @@
 # kronicle/connectors/channel/kronicle_reader.py
 
 
-from kronicle.conf.read_conf import Settings
-from kronicle.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
+from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
 
 
 class KronicleReader(KronicleAbstractChannelConnector):
@@ -19,7 +19,7 @@ class KronicleReader(KronicleAbstractChannelConnector):
 
 
 if __name__ == "__main__":
-    from kronicle.utils.log import log_d
+    from kronicle_sdk.utils.log import log_d
 
     here = "read Kronicle"
     log_d(here)

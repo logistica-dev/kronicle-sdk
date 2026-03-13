@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from typing import Any
 
-from kronicle.models.data.kronicable_sample import KronicableSample
-from kronicle.models.data.kronicle_payload import KroniclePayload
-from kronicle.models.iso_datetime import now, now_local
+from kronicle_sdk.models.data.kronicable_sample import KronicableSample
+from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.iso_datetime import now, now_local
 
 
 class KronicableSampleCollection:
@@ -119,8 +119,8 @@ if __name__ == "__main__":
     """
     from uuid import uuid4
 
-    from kronicle.models.iso_datetime import IsoDateTime
-    from kronicle.utils.log import log_d
+    from kronicle_sdk.models.iso_datetime import IsoDateTime
+    from kronicle_sdk.utils.log import log_d
 
     here = "Test KronicableSampleCollection"
 

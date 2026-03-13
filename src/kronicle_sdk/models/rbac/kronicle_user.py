@@ -1,9 +1,8 @@
 from typing import Any
 from uuid import UUID
 
+from kronicle_sdk.utils.dict_utils import skip_nones
 from pydantic import BaseModel
-
-from kronicle.utils.dict_utils import skip_nones
 
 
 class KronicleUser(BaseModel):

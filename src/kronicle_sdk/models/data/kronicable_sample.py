@@ -2,10 +2,9 @@
 from json import dumps
 from typing import Any
 
+from kronicle_sdk.models.data.kronicable_type import COL_TO_PY_TYPE, KronicableTypeChecker
+from kronicle_sdk.models.iso_datetime import IsoDateTime, now
 from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
-
-from kronicle.models.data.kronicable_type import COL_TO_PY_TYPE, KronicableTypeChecker
-from kronicle.models.iso_datetime import IsoDateTime, now
 
 
 class SingleTypeField:
@@ -111,7 +110,7 @@ class KronicableSample(BaseModel):
 # Example usage
 # ------------------------------------------------------------
 if __name__ == "__main__":
-    from kronicle.utils.log import log_d
+    from kronicle_sdk.utils.log import log_d
 
     here = "KronicableSample.tests"
 

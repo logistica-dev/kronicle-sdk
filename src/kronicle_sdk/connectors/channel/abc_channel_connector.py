@@ -3,13 +3,12 @@ from abc import abstractmethod
 from typing import Any, Callable, Literal, Tuple
 from uuid import UUID
 
+from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
+from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.kronicle_errors import KronicleResponseError
+from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
 from requests import Response, delete, get, patch, post, put
-
-from kronicle.connectors.auth.kronicle_auth import KronicleUsrLogin
-from kronicle.models.data.kronicle_payload import KroniclePayload
-from kronicle.models.kronicle_errors import KronicleResponseError
-from kronicle.utils.log import log_d, log_w
-from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):

@@ -3,12 +3,11 @@ from abc import ABC, abstractmethod
 from time import sleep
 from typing import Any, Callable
 
+from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
+from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
 from requests import Response, delete, get, patch, post, put
-
-from kronicle.models.data.kronicle_payload import KroniclePayload
-from kronicle.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
-from kronicle.utils.log import log_d, log_w
-from kronicle.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
 class KronicleAbstractConnector(ABC):

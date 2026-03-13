@@ -2,7 +2,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 from os import environ
 from pathlib import Path
 
-from kronicle.utils.file_utils import check_is_file
+from kronicle_sdk.utils.file_utils import check_is_file
 
 
 def read_ini_conf(file_path):
