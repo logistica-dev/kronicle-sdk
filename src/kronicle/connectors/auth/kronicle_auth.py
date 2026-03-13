@@ -39,16 +39,17 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             url=slash_join(self.url, "/auth/v1/login"),
             json={"login": self.usr, "password": self.pwd},
         )
-        data = res.json()
-        jwt = data.get("access_token")
+        return self._renew_jwt_from_res(res.json())
+
+    def _renew_jwt_from_res(self, res_json: dict) -> str:
+        jwt = res_json.get("access_token")
         if jwt and isinstance(jwt, str):
             self._jwt = jwt
             self._exp = None
             log_d("get_jwt", f"logged in as '{self.usr}' on", self.url)
-
             return self._jwt
         else:
-            raise KronicleConnectionError(f"Could not log to the Kronicle server at {self.url}")
+            raise KronicleResponseError("Not field 'access_token' fond in server response")
 
     @property
     def auth_headers(self) -> dict:
@@ -141,9 +142,25 @@ class KronicleUsrLogin(KronicleAbstractConnector):
 
         raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
 
+    def change_password(self, new_password: str):
+        res = self.post(
+            "/change_password",
+            {
+                "login": self.usr,
+                "password": self.pwd,
+                "new_password": new_password,
+                "confirm_password": new_password,
+            },
+        )
+        return self._renew_jwt_from_res(res)
+
 
 if __name__ == "__main__":  # pragma: no cover
     tests = "login"
     co = Settings().connection
+    log_d(tests, "login", co.usr, co.pwd)
+
     login = KronicleUsrLogin(co.url, co.usr, co.pwd)
     log_d(tests, "jwt", login.jwt)
+
+    # log_d(tests, "new_jwt", login.change_password("Toto456789!"))

@@ -1,7 +1,7 @@
 from kronicle.conf.read_conf import Settings
-from kronicle.connectors.auth.kronicle_login import KronicleUsrLogin
+from kronicle.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle.models.rbac.kronicle_user import KronicleUser
-from kronicle.utils.log import log_d
+from kronicle.utils.log import log_d, log_w
 
 
 class KronicleRbacConnector(KronicleUsrLogin):
@@ -42,6 +42,11 @@ class KronicleRbacConnector(KronicleUsrLogin):
         usr = self.put(route="/users", body=user.to_json())
         return KronicleUser(**usr)
 
+    # def get_user(self, id):
+    def delete_user(self, user: KronicleUser) -> KronicleUser:
+        usr = self.delete(route="/users", body=user.to_json())
+        return KronicleUser(**usr)
+
 
 if __name__ == "__main__":
     here = "abstract Kronicle connector"
@@ -60,9 +65,25 @@ if __name__ == "__main__":
 
     usr2 = KronicleUser(
         email="dave@toto.fr",
+        name="Dave",
+        orcid="1234-5678-9101",
+        full_name="Dave Bond",
+        password="Wonderful_Secrets_123403657",
+    )
+    try:
+        res = kronicle_rbac.create_user(usr2)
+        log_d(here, "Created", res)
+    except Exception as e:
+        log_w(here, e)
+
+    usr2 = KronicleUser(
+        email="dave@toto.fr",
         name="Dave2",
         orcid="1234-5678-9102",
         full_name="Dave Bond II",
         # password="Wonderful_Secrets_123403657",
     )
-    kronicle_rbac.update_user(usr2)
+    res = kronicle_rbac.update_user(usr2)
+    log_d(here, "Updated", res)
+    res = kronicle_rbac.delete_user(usr2)
+    log_d(here, "Deleted", res)

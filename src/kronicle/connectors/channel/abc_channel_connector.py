@@ -5,7 +5,7 @@ from uuid import UUID
 
 from requests import Response, delete, get, patch, post, put
 
-from kronicle.connectors.auth.kronicle_login import KronicleUsrLogin
+from kronicle.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle.models.data.kronicle_payload import KroniclePayload
 from kronicle.models.kronicle_errors import KronicleResponseError
 from kronicle.utils.log import log_d, log_w
