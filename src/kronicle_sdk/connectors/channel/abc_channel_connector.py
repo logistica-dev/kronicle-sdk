@@ -3,12 +3,13 @@ from abc import abstractmethod
 from typing import Any, Callable, Literal, Tuple
 from uuid import UUID
 
+from requests import Response, delete, get, patch, post, put
+
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
-from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -57,7 +58,8 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
                 return [KroniclePayload.from_json(d) for d in data]
         except Exception as exc:
             raise KronicleResponseError(
-                f"Unexpected response format. Expected KroniclePayload or list[KroniclePayload], got: {response.content}"
+                "Unexpected response format. Expected KroniclePayload or list[KroniclePayload], got:"
+                f" {response.content}"
             ) from exc
 
         raise KronicleResponseError(f"Unexpected response type: {get_type(data)}; expected dict or list")

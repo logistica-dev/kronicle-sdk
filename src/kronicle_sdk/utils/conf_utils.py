@@ -5,7 +5,7 @@ from pathlib import Path
 from kronicle_sdk.utils.file_utils import check_is_file
 
 
-def read_ini_conf(file_path):
+def read_ini_conf(file_path) -> ConfigParser:
     check_is_file(file_path)
     config_reader = ConfigParser(interpolation=ExtendedInterpolation())
     config_reader.read(file_path)

@@ -1,9 +1,21 @@
 [flake8]
 max-line-length = 120
+extend-select = B907
+; extend-ignore = E203, W503, I101
+
 exclude =
-    .git,
-    __pycache__,
-    docs/source/conf.py,
-    old,
-    build,
+    __pycache__
+    .git
+    .tox
+    .env
+    env
+    .venv
+    venv
+    .secrets
+    .conf
+    build
     dist
+    docs
+    migrations
+    old
+    wip

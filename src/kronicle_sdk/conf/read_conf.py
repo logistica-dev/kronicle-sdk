@@ -1,9 +1,19 @@
+# kronicle_sdk/conf/read_conf.py
 from __future__ import annotations
 
 import os
+from configparser import ConfigParser, NoOptionError
 from dataclasses import dataclass
 from typing import Any
 
+from kronicle_sdk.conf.env_keys import (
+    KRONICLE_HOST,
+    KRONICLE_PORT,
+    KRONICLE_SU_NAME,
+    KRONICLE_SU_PASS,
+    KRONICLE_USR_NAME,
+    KRONICLE_USR_PASS,
+)
 from kronicle_sdk.utils.conf_utils import read_ini_conf
 from kronicle_sdk.utils.file_utils import is_file
 from kronicle_sdk.utils.log import log_d, log_w
@@ -30,18 +40,18 @@ class ConnectionInformation:
 class Settings:
     def __init__(self, ini_file: str | None = None):
         here = "conf.init"
-        self._conf = None
+        self._conf: ConfigParser | None = None
         if ini_file and is_file(ini_file):
             self._conf = read_ini_conf(ini_file)
             self._section = "kronicle"
 
-        host = self.get_setting(env="KRONICLE_HOST", param="host") or "localhost"
-        port = int(self.get_setting(env="KRONICLE_PORT", param="port") or 8000)
+        host = self.get_setting(env=KRONICLE_HOST, param="host") or "localhost"
+        port = int(self.get_setting(env=KRONICLE_PORT, param="port") or 8000)
         if not host and port:
             log_w(here, "Connection information not found, defaulting to localhost:8000")
 
-        usr = self.get_setting(env="KRONICLE_USR_NAME", param="username")
-        pwd = self.get_setting(env="KRONICLE_USR_PASS", param="password")
+        usr = self.get_setting(env=KRONICLE_USR_NAME, param="username")
+        pwd = self.get_setting(env=KRONICLE_USR_PASS, param="password")
         if not usr or not pwd:
             raise RuntimeError(
                 "Credentials were not found.\n"
@@ -49,8 +59,8 @@ class Settings:
             )
         self.connection = ConnectionInformation(host, port, usr, pwd)
 
-        su_usr = self.get_setting(env="KRONICLE_SU_NAME", param="su_username")
-        su_pwd = self.get_setting(env="KRONICLE_SU_PASS", param="su_password")
+        su_usr = self.get_setting(env=KRONICLE_SU_NAME, param="su_username")
+        su_pwd = self.get_setting(env=KRONICLE_SU_PASS, param="su_password")
         if su_usr and su_pwd:
             self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
         else:
@@ -58,6 +68,10 @@ class Settings:
             log_d(here, "No credentials found for SU.")
 
     def get_setting(self, *, env: str | None = None, param: str | None = None, default: Any | None = None):
+        """
+        Retrieve a setting from an environment variable or, alternatively, an ini file.
+        If both are set, values from ENV are preferred.
+        """
         here = "settings"
         if env:
             env_val = os.getenv(env.upper())
@@ -65,11 +79,14 @@ class Settings:
                 # log_d(here, "Extracted from environment variables:", env)
                 return env_val
         if self._conf and param:
-            conf_val = self._conf.get(self._section, param.lower())
+            try:
+                conf_val = self._conf.get(self._section, param.lower())
+            except NoOptionError as e:
+                raise RuntimeError(f"Missing '{param}' in config section '{self._section}'") from e
             if conf_val:
                 log_d(here, "Extracted from conf file:", param)
                 return conf_val
-            return None
+            return default
 
 
 def get_conf(ini_file: str | None = "./.conf/config.ini"):

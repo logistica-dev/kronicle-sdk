@@ -15,7 +15,10 @@ class KronicleResponseError(KronicleError):
 
 
 class KronicleOperationError(KronicleError):
-    """Raised when Kronicle reports an error in its operation, e.g., failed insert, validation error, or op_status != 'success'."""
+    """
+    Raised when Kronicle reports an error in its operation
+    e.g., failed insert, validation error, or op_status != 'success'.
+    """
 
     def __init__(self, message: str, payload: dict | None = None):
         super().__init__(message)
