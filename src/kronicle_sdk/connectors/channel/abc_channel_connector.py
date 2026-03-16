@@ -9,7 +9,7 @@ from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
-from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
+from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -40,20 +40,12 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         Raises:
             KronicleResponseError: If the response is invalid or not JSON.
         """
-        if not response or not response.content:
-            raise KronicleResponseError("No response content received from Kronicle")
-        try:
-            data = response.json()
-        except Exception as exc:
-            raise KronicleResponseError(f"Failed to decode JSON: {response.content}") from exc
-
+        data = super()._parse(response)
         if not strict:
             return data
-
         try:
             if isinstance(data, dict):
                 return KroniclePayload.from_json(data)
-
             if isinstance(data, list):
                 return [KroniclePayload.from_json(d) for d in data]
         except Exception as exc:
@@ -74,33 +66,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         should_log: bool = False,
         **params,
     ) -> KroniclePayload | list[KroniclePayload]:
-        """
-        Execute an HTTP request with retries and validated payload.
-
-        Retry only on connection-level errors; do not retry on HTTP 4xx/5xx
-        or malformed responses.
-
-        Args:
-            method: requests HTTP method (get, post, put, delete, patch)
-            route: route path to append to base URL
-            body: optional payload (dict or KroniclePayload)
-            strict: validate the response as KroniclePayload(s)
-            params: URL query parameters or other requests kwargs
-
-        Raises:
-            KronicleConnectionError: all retries exhausted
-            KronicleHTTPError: HTTP 4xx/5xx response
-            KronicleResponseError: response not JSON or invalid format
-            TypeError: body type is invalid
-        """
-        return super()._request(
-            method=method,
-            route=route,
-            body=body,
-            strict=strict,
-            should_log=should_log,
-            **params,
-        )
+        return super()._request(method=method, route=route, body=body, strict=strict, should_log=should_log, **params)
 
     def _invalidate_cache(self):
         self._metadata_cache = None
@@ -116,44 +82,6 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             raise TypeError(f"Invalid body type: {get_type(body)}")
         return payload.model_dump(mode="json", exclude_none=True)
 
-    @classmethod
-    def _ensure_is_payload(cls, res) -> KroniclePayload:
-        """Ensure the result is a KroniclePayload."""
-        if isinstance(res, KroniclePayload):
-            return res
-        raise TypeError(f"KroniclePayload expected, got '{get_type(res)}' for {res}")
-
-    @classmethod
-    def _ensure_is_payload_or_none(cls, res) -> KroniclePayload | None:
-        """Ensure the result is a KroniclePayload or None."""
-        return None if not res else cls._ensure_is_payload(res)
-
-    @classmethod
-    def _ensure_is_payload_list(cls, res) -> list[KroniclePayload]:
-        """Ensure the result is a list of KroniclePayload."""
-        if not isinstance(res, list):
-            raise TypeError(f"List expected, got '{get_type(res)}' for {res}")
-        for res_i in res:
-            if not isinstance(res_i, KroniclePayload):
-                raise TypeError(
-                    f"Each element of the list should be a KroniclePayload, got '{get_type(res_i)}' for {res_i}"
-                )
-        return res
-
-    def _ensure_body_as_payload(self, body: KroniclePayload | dict):
-        return body if isinstance(body, KroniclePayload) else KroniclePayload.from_json(body)
-
-    def _ensure_payload_id(self, body: KroniclePayload | dict):
-        here = "abc_connector._ensure_payload_id"
-        log_d(here, "type(body)", type(body).__name__)
-        log_d(here, "body", body)
-        payload = self._ensure_body_as_payload(body)
-        log_d(here, "kroniclePayload", payload)
-
-        if not (channel_id := payload.channel_id):
-            raise ValueError("Channel ID missing")
-        return check_is_uuid4(channel_id)
-
     # ----------------------------------------------------------------------------------------------
     # HTTP verbs
     # ----------------------------------------------------------------------------------------------
@@ -166,38 +94,23 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         self, route: str | None = None, body: KroniclePayload | dict | None = None, **params
     ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a POST request with validation."""
-        self._invalidate_cache()
         return self._request(post, route=route, body=body, **params)
 
     def put(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        self._invalidate_cache()
         return self._request(put, route=route, body=body, **params)
 
     def patch(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        self._invalidate_cache()
         return self._request(patch, route=route, body=body, **params)
 
     def delete(self, route: str, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a DELETE request and return validated payload(s)."""
-        self._invalidate_cache()
         return self._request(delete, route=route, **params)
-
-    # ----------------------------------------------------------------------------------------------
-    # Health check
-    # ----------------------------------------------------------------------------------------------
-    def is_alive(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/live")), strict=False)
-        return isinstance(res, dict) and res.get("status") == "alive"
-
-    def is_ready(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/ready")), strict=False)
-        return isinstance(res, dict) and res.get("status") == "ready"
 
     # ----------------------------------------------------------------------------------------------
     # Convenience API

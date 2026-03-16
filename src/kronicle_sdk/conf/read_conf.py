@@ -22,7 +22,7 @@ from kronicle_sdk.utils.log import log_d, log_w
 @dataclass
 class ConnectionInformation:
     host: str
-    port: int
+    port: int | None
 
     usr: str
     pwd: str
@@ -30,7 +30,8 @@ class ConnectionInformation:
     @property
     def url(self):
         ssl = self.host not in ["localhost", "127.0.0.1"]
-        return f"http{'s' if ssl else ''}://{self.host}:{self.port}"
+        _port = f":{self.port}" if self.port else ""
+        return f"http{'s' if ssl else ''}://{self.host}{_port}"
 
     @property
     def creds(self):
@@ -46,8 +47,9 @@ class Settings:
             self._section = "kronicle"
 
         host = self.get_setting(env=KRONICLE_HOST, param="host") or "localhost"
-        port = int(self.get_setting(env=KRONICLE_PORT, param="port") or 8000)
-        if not host and port:
+        _port = self.get_setting(env=KRONICLE_PORT, param="port")
+        port = int(_port) if _port else None
+        if not host and not port:
             log_w(here, "Connection information not found, defaulting to localhost:8000")
 
         usr = self.get_setting(env=KRONICLE_USR_NAME, param="username")
@@ -75,7 +77,7 @@ class Settings:
         here = "settings"
         if env:
             env_val = os.getenv(env.upper())
-            if env_val:
+            if env_val is not None:
                 # log_d(here, "Extracted from environment variables:", env)
                 return env_val
         if self._conf and param:

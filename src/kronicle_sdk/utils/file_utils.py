@@ -1,4 +1,3 @@
-from hashlib import md5, sha256, sha512
 from json import dump, load
 from os import makedirs, stat
 from os.path import abspath, exists, expanduser
@@ -128,19 +127,6 @@ def get_file_size(file_local_path: str) -> int:
 
 
 ACCEPTED_HASH_ALGOS = ("MD5", "SHA-256", "SHA256", "SHA-512", "SHA512")
-
-
-def get_file_hash(file_local_path: str, hash_algo: str = "md5") -> str:
-    file_content = open(check_is_file(file_local_path), "rb").read()
-    if not isinstance(hash_algo, str) or (upper_algo := hash_algo.upper()) not in ACCEPTED_HASH_ALGOS:
-        raise ValueError(f"Hash algorithm should be MD5, SHA-256 or SHA-512, got: '{hash_algo}'")
-    if upper_algo == "MD5":
-        return md5(file_content).hexdigest()
-    if upper_algo in ("SHA256", "SHA-256"):
-        return sha256(file_content).hexdigest()
-    # if upper_algo not in ("SHA512", "SHA-512"):
-    #      raise NotImplementedError("This hash algorithm was not recognized: {hash_algo}")
-    return sha512(file_content).hexdigest()
 
 
 def read_json_file(file_path, mode: Literal["b", "t"] = "t"):  # pragma: no cover

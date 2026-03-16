@@ -1,13 +1,15 @@
 # kronicle/connectors/abc_connector.py
+import contextlib
 from abc import ABC, abstractmethod
 from time import sleep
-from typing import Any, Callable
+from typing import Any, Callable, Generator
+
+from requests import Response, delete, get, patch, post, put
 
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
-from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractConnector(ABC):
@@ -23,23 +25,51 @@ class KronicleAbstractConnector(ABC):
         self.url = url
         self._retries: int = 2
         self._delay: int = 2
+        self.timeout: int = 3  # seconds
 
     @property
     @abstractmethod
     def prefix(self) -> str:
         raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', 'setup/v1', 'auth/v1'...")
 
+    def _join(self, route: str | None) -> str:
+        """Join base URL, prefix, and route into a full URL."""
+        return slash_join(self.url, self.prefix, route)
+
     # ----------------------------------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------------------------------
+    @contextlib.contextmanager
+    def _attempt(
+        self, func: Callable[[], Any], retries: int | None = None, delay: float | None = None
+    ) -> Generator[Any, None, None]:
+        """
+        Context manager for retries with delay, returns func() result if successful.
+        """
+        here = "_attempt"
+        retries = retries if retries else self._retries
+        delay = delay if delay is not None else self._delay
+        last_exc = None
+
+        for attempt in range(1, retries + 1):
+            try:
+                return func()
+            except (KronicleResponseError, KronicleHTTPError) as exc:
+                # Non-retriable: malformed response or HTTP error
+                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
+                raise exc
+            except Exception as exc:
+                # retriable: network error, timeout, etc.
+                last_exc = exc
+                log_w(here, f"[attempt {attempt}] retriable exception", exc)
+                sleep(self._delay)
+
+        raise KronicleConnectionError(f"Failed after {retries} attempts") from last_exc
+
     @staticmethod
     def method_str(method: Callable) -> str:
         return method.__name__.upper()
         # return f"{method}".split(" ")[1].upper()
-
-    def _join(self, route: str | None) -> str:
-        """Join base URL, prefix, and route into a full URL."""
-        return slash_join(self.url, self.prefix, route)
 
     def _parse(self, response: Response, **params) -> Any:
         """
@@ -89,38 +119,27 @@ class KronicleAbstractConnector(ABC):
         here = f"{get_type(self)}.req"
         url = self._join(route)
         method_str = self.method_str(method)
+        if method_str != "GET":
+            self._invalidate_cache()
 
         json_body = self._serialize_payload(body)
         # Build kwargs without mutating user params
         request_kwargs = params.copy()
         if json_body is not None:
             request_kwargs["json"] = json_body
+        request_kwargs.setdefault("timeout", getattr(self, "_timeout", 5))  # default timeout 5s
 
-        last_exc = None
-        for attempt in range(1, self._retries + 1):
-            try:
-                if should_log:
-                    log_d(here, "Request", method_str, url)
-                response: Response = method(url=url, **request_kwargs)
-                if should_log:
-                    log_d(here, "Response", response.json())
+        def func():
+            if should_log:
+                log_d(here, "Request", method_str, url)
+            response: Response = method(url=url, **request_kwargs)
+            if should_log:
+                log_d(here, "Response", response.json())
+            if response.status_code and response.status_code >= 400:
+                raise KronicleHTTPError.from_response(response, path=url, method=method_str)
+            return self._parse(response=response, strict=strict)
 
-                if response.status_code and response.status_code >= 400:
-                    raise KronicleHTTPError.from_response(response, path=url, method=method_str)
-
-                return self._parse(response=response, strict=strict)
-
-            except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Non-retriable: malformed response or HTTP error
-                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
-                raise exc
-            except Exception as exc:
-                # retriable: network error, timeout, etc.
-                last_exc = exc
-                log_w(here, f"[attempt {attempt}] retriable exception", exc)
-                sleep(self._delay)
-
-        raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
+        return self._attempt(func)
 
     def _invalidate_cache(self):
         self._metadata_cache = None
@@ -180,49 +199,35 @@ class KronicleAbstractConnector(ABC):
 
     def get(self, route: str | None = None, **params) -> Any:
         """Perform a GET request and return validated payload(s)."""
-        return self._request(get, route=route, **params)
+        return self._request(get, route=route, timeout=self.timeout, **params)
 
     def post(self, route: str | None = None, body: KroniclePayload | dict | None = None, **params) -> Any:
         """Perform a POST request with validation."""
-        self._invalidate_cache()
-        return self._request(post, route=route, body=body, **params)
+        return self._request(post, route=route, body=body, timeout=self.timeout, **params)
 
     def put(self, route: str, body: KroniclePayload | dict, **params) -> Any:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        self._invalidate_cache()
-        return self._request(put, route=route, body=body, **params)
+        return self._request(put, route=route, body=body, timeout=self.timeout, **params)
 
     def patch(self, route: str, body: KroniclePayload | dict, **params) -> Any:
-        """Perform a PUT request with validation."""
+        """Perform a PATCH request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        self._invalidate_cache()
-        return self._request(patch, route=route, body=body, **params)
+        return self._request(patch, route=route, timeout=self.timeout, body=body, **params)
 
     def delete(self, route: str, **params) -> Any:
         """Perform a DELETE request and return validated payload(s)."""
-        self._invalidate_cache()
-        return self._request(delete, route=route, **params)
+        return self._request(delete, route=route, timeout=self.timeout, **params)
 
     # ----------------------------------------------------------------------------------------------
     # Health check
     # ----------------------------------------------------------------------------------------------
     def is_alive(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/live")), strict=False)
+        res = self._parse(get(url=slash_join(self.url, "/health/live"), timeout=self.timeout), strict=False)
         return isinstance(res, dict) and res.get("status") == "alive"
 
     def is_ready(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/ready")), strict=False)
+        res = self._parse(get(url=slash_join(self.url, "/health/ready"), timeout=self.timeout), strict=False)
         return isinstance(res, dict) and res.get("status") == "ready"
-
-
-if __name__ == "__main__":
-    here = "abstract Kronicle connector"
-    log_d(here)
-    try:
-        kronicle = KronicleAbstractConnector("http://127.0.0.1:8000")  # type: ignore
-    except TypeError as e:
-        log_w(here, "WARNING", e)
-    log_d(here, "^^^ There should be a warning above ^^^")

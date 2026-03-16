@@ -64,7 +64,6 @@ class DateGenerator:
         if self.jitter is None:
             return timedelta(0)
 
-        # jitter.total_seconds() * uniform(-1, 1)
         seconds = self.jitter.total_seconds() * random.uniform(-1, 1)
         return timedelta(seconds=seconds)
 

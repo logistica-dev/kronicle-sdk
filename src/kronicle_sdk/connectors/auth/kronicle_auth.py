@@ -13,7 +13,7 @@ from kronicle_sdk.models.kronicle_errors import (
     KronicleHTTPError,
     KronicleResponseError,
 )
-from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.log import log_d, log_e, log_w
 from kronicle_sdk.utils.str_utils import decode_b64url, get_type, slash_join
 
 
@@ -35,10 +35,11 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             return self._jwt
 
         # log_d("get_jwt", f"login as '{self.usr}'...")
-        res: Response = post(
-            url=slash_join(self.url, "/auth/v1/login"),
-            json={"login": self.usr, "password": self.pwd},
-        )
+        login_url = slash_join(self.url, "/auth/v1/login")
+        log_d("jwt", "login_url", login_url)
+        res: Response = post(url=login_url, json={"login": self.usr, "password": self.pwd})
+        if res.status_code and res.status_code > 399:
+            log_e("get_jwt", "res", res.json())
         return self._renew_jwt_from_res(res.json())
 
     def _renew_jwt_from_res(self, res_json: dict) -> str:
@@ -157,10 +158,9 @@ class KronicleUsrLogin(KronicleAbstractConnector):
 
 if __name__ == "__main__":  # pragma: no cover
     tests = "login"
-    co = Settings().connection
-    log_d(tests, "login", co.usr, co.pwd)
+    co = Settings().connection_su
+    assert co
 
+    log_d(tests, "login", co.usr, co.pwd)
     login = KronicleUsrLogin(co.url, co.usr, co.pwd)
     log_d(tests, "jwt", login.jwt)
-
-    # log_d(tests, "new_jwt", login.change_password("Toto456789!"))
