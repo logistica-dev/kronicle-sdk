@@ -9,9 +9,10 @@ from datetime import datetime
 from types import MappingProxyType, NoneType, UnionType
 from typing import Any, Final, Union, get_args, get_origin
 
+from pydantic import BaseModel
+
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.utils.log import log_w
-from pydantic import BaseModel
 
 COL_TO_PY_TYPE: Final = MappingProxyType(
     {
@@ -181,9 +182,9 @@ class KronicableTypeChecker:
         if origin is list:
             return "list"
 
-        # BaseModel subclasses -> serialize as JSON string -> "str"
+        # BaseModel subclasses -> serialize as JSON -> "dict"
         if isinstance(typ, type) and issubclass(typ, BaseModel):
-            return "str"
+            return "dict"
 
         # fallback
         return "str"

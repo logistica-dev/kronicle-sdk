@@ -1,2 +1,3 @@
 pydantic
 requests
+pydantic[email]>=2.12.5

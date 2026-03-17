@@ -116,9 +116,9 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     # Convenience API
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_channels(self) -> list[KroniclePayload]:
+    def get_all_channels(self, **params) -> list[KroniclePayload]:
         """Retrieve all channels as a list of KroniclePayload."""
-        return self._ensure_is_payload_list(self.get(route="channels"))
+        return self._ensure_is_payload_list(self.get(route="channels", **params))
 
     @property
     def all_channels(self) -> list[KroniclePayload]:

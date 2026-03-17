@@ -1,3 +1,4 @@
+import re
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime
 from random import choices
@@ -41,6 +42,16 @@ def get_type(obj) -> str:
 
 def uuid4_str() -> str:
     return str(uuid4())
+
+
+def validate_orcid(v: str) -> str:
+    v = v.strip()
+    # Match optional https://, optional http://, then orcid.org/, then the 4-digit groups
+    match = re.fullmatch(r"(?:https?://)?(?:orcid\.org/)?((\d{4}-){3}\d{4})", v)
+    if not match:
+        raise ValueError("not a valid ORCID")
+    # Return only the 4 quadruplets
+    return match[1]
 
 
 def tiny_id(n: int = 8) -> str:

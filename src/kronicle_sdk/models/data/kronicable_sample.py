@@ -2,9 +2,10 @@
 from json import dumps
 from typing import Any
 
+from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
+
 from kronicle_sdk.models.data.kronicable_type import COL_TO_PY_TYPE, KronicableTypeChecker
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now
-from pydantic import BaseModel, PrivateAttr, computed_field, model_validator
 
 
 class SingleTypeField:
@@ -76,7 +77,7 @@ class KronicableSample(BaseModel):
     def to_row(self) -> dict[str, Any]:
         """
         Convert this object into a dictionary for KroniclePayload.
-        Nested BaseModel or list/dict of BaseModels is serialized to JSON.
+        Nested BaseModel or list/dict of BaseModels is serialized to dict.
         Fields with None values are omitted (optional fields not set).
         """
         row: dict[str, Any] = {}
@@ -96,7 +97,7 @@ class KronicableSample(BaseModel):
                     raise ValueError(f"Field '{name}' is required but has value None")
 
             if isinstance(value, BaseModel):
-                row[name] = value.model_dump_json()
+                row[name] = value.model_dump()
             elif isinstance(value, list) and all(isinstance(v, BaseModel) for v in value):
                 row[name] = dumps([v.model_dump() for v in value])
             elif isinstance(value, dict) and all(isinstance(v, BaseModel) for v in value.values()):

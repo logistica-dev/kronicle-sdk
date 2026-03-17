@@ -44,6 +44,7 @@ if __name__ == "__main__":
     here = "KronicleWriter"
     log_d(here)
     co = Settings().connection
+    log_d(here, "Connecting to", co.url)
     kronicle_writer = KronicleWriter(co.url, co.usr, co.pwd)
     [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
     max_chan_id, _ = kronicle_writer.get_channel_with_max_rows()
@@ -65,10 +66,18 @@ if __name__ == "__main__":
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},
         "rows": [
-            {"time": "2025-01-01T00:00:00Z", "temperature": 12.3},
-            {"time": "2025-01-01T00:01:00Z", "temperature": 12.8},
+            {"time": now_tag, "temperature": 12.3},
+            {"time": now_tag, "temperature": 12.8},
         ],
     }
     log_d(here, "payload", payload)
     result = kronicle_writer.insert_rows_and_upsert_channel(payload)
     log_d(here, "result", result)
+    log_d(here, "channels", kronicle_writer.get_all_channels(should_log=True))
+    log_d(
+        here,
+        "channels",
+        kronicle_writer.get(route="channels"),
+    )
+
+    log_d(here, "channels", kronicle_writer.get_channel(channel_id))

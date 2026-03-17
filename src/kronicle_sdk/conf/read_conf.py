@@ -46,12 +46,17 @@ class Settings:
             self._conf = read_ini_conf(ini_file)
             self._section = "kronicle"
 
-        host = self.get_setting(env=KRONICLE_HOST, param="host") or "localhost"
+        host = self.get_setting(env=KRONICLE_HOST, param="host")
         _port = self.get_setting(env=KRONICLE_PORT, param="port")
         port = int(_port) if _port else None
         if not host and not port:
             log_w(here, "Connection information not found, defaulting to localhost:8000")
-
+            host = "localhost"
+            port = 8000
+        if not host:
+            raise RuntimeError(
+                "Host not provided.\nPlease ensure KRONICLE_HOST and KRONICLE_PORT environment variables are set."
+            )
         usr = self.get_setting(env=KRONICLE_USR_NAME, param="username")
         pwd = self.get_setting(env=KRONICLE_USR_PASS, param="password")
         if not usr or not pwd:

@@ -13,10 +13,11 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel, field_validator, model_validator
+
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local, now_utc
 from kronicle_sdk.utils.log import log_d
-from pydantic import BaseModel, field_validator, model_validator
 
 mod = "KroniclePayload"
 
