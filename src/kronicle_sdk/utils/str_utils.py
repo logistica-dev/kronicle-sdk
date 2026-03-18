@@ -115,7 +115,7 @@ def normalize_column_name(s: str) -> str:
         s = "col_" + s
     elif not s:
         # Generate 8-character random name
-        s = "col_" + "".join(choices(ascii_lowercase + digits, k=8))
+        s = "col_" + "".join(choices(ascii_lowercase + digits, k=8))  # nosec B311 - used for generating names in tests
     return s
 
 
@@ -169,7 +169,7 @@ def decode_b64url(b64_str: str) -> str:
         raise ValueError("Input string is not properly encoded in base64url") from e
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     here = "str_utils"
     print(here, "strip_quotes 'toto':", strip_quotes("'toto'"))
     print(here, 'strip_quotes "toto":', strip_quotes('"toto"'))

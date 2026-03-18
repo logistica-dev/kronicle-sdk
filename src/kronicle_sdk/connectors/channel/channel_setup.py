@@ -49,13 +49,19 @@ class KronicleSetup(KronicleWriter):
             except Exception as e:
                 log_w(here, f"Could not delete channel {channel_id}", e)
 
-    def clone_channel(self, id: UUID | str, body: KroniclePayload | dict | None):
+    def clone_channel(self, src_id: UUID | str, *, body: KroniclePayload | dict | None = None):
+        if isinstance(src_id, str):
+            src_id = UUID(src_id)
         if not body:
-            self.post(route=f"channels/{id}/clone")
-        self.post(route=f"channels/{id}/clone", body=body)
+            body = KroniclePayload(channel_id=src_id)
+        elif isinstance(body, KroniclePayload):
+            body.channel_id = src_id
+        else:
+            body = KroniclePayload(channel_id=src_id, **body)
+        return self.post(route=f"channels/{src_id}/clone", body=body)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     from kronicle_sdk.utils.log import log_d
 
     here = "ksetup"

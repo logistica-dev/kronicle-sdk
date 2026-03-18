@@ -231,7 +231,7 @@ class KroniclePayload(BaseModel):
         return self.columns if self.columns else self._rows_to_columns()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
     here = "Kronicle payload"

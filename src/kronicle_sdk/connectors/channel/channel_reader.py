@@ -18,7 +18,7 @@ class KronicleReader(KronicleAbstractChannelConnector):
         return "/api/v1"
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     from kronicle_sdk.utils.log import log_d
 
     here = "read Kronicle"

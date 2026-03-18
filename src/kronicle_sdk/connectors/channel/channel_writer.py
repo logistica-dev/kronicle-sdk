@@ -36,7 +36,7 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         return self.post(f"channels/{id}/rows", body=payload)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     from kronicle_sdk.models.iso_datetime import now_local
     from kronicle_sdk.utils.log import log_d
     from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str

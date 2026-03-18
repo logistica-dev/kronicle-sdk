@@ -161,7 +161,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         return None, None
 
     def get_rows_for_channel(
-        self, id: UUID | str, return_type: Literal["str", "df", "dict", "list"] = "list"
+        self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "list"
     ) -> str | list[dict[str, Any]] | None:
         """
         Retrieve the rows of a channel in specified format.
@@ -177,7 +177,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
                 return result.rows
         raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
-    def get_cols_for_channel(self, id: UUID | str, return_type: Literal["str", "df", "dict", "list"] = "dict"):
+    def get_cols_for_channel(self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "dict"):
         """
         Retrieve the columns of a channel in specified format.
 
@@ -195,7 +195,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     here = "abstract Kronicle connector"
     log_d(here)
     try:

@@ -113,7 +113,7 @@ class KronicableSampleCollection:
         return payload
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     """
     Demonstration of KronicableSampleCollection usage.
     """

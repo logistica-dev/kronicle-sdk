@@ -46,7 +46,7 @@ def skip_nones(data: dict) -> dict:
     return {k: v for k, v in data.items() if v is not None}
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))
     print(

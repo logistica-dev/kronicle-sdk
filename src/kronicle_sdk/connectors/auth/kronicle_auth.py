@@ -37,7 +37,11 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         # log_d("get_jwt", f"login as '{self.usr}'...")
         login_url = slash_join(self.url, "/auth/v1/login")
         log_d("jwt", "login_url", login_url)
-        res: Response = post(url=login_url, json={"login": self.usr, "password": self.pwd})
+        res: Response = post(
+            url=login_url,
+            json={"login": self.usr, "password": self.pwd},
+            timeout=5,
+        )
         if res.status_code and res.status_code > 399:
             log_e("get_jwt", "res", res.json())
         return self._renew_jwt_from_res(res.json())
@@ -159,7 +163,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
 if __name__ == "__main__":  # pragma: no cover
     tests = "login"
     co = Settings().connection_su
-    assert co
+    if not co:
+        raise RuntimeError("Not found: SU credentials")
 
     log_d(tests, "login", co.usr, co.pwd)
     login = KronicleUsrLogin(co.url, co.usr, co.pwd)

@@ -43,33 +43,43 @@ class KronicableSample(BaseModel):
     # ----------------------------------------------------------------------------------------------
     # Methods to generate KroniclePayload
     # ----------------------------------------------------------------------------------------------
-    @property
-    def _fields(self):
-        return self.__class__.model_fields
+    @classmethod
+    def get_all_fields(cls):
+        return {**cls.model_fields, **cls.model_computed_fields}
 
-    @property
-    def _computed_fields(self):
-        return self.__class__.model_computed_fields
+    @classmethod
+    def _get_channel_schema(cls) -> dict[str, str]:
+        schema: dict[str, str] = {}
 
-    @property
-    def _all_fields(self):
-        return {**self._fields, **self._computed_fields}
+        # Regular fields:  declared_type = field.annotation
+        # Computed fields: declared_type = field.return_type
+        for name, field in cls.get_all_fields().items():
+            declared_type = field.annotation if hasattr(field, "annotation") else field.return_type
+            kt = KronicableTypeChecker(declared_type)
+            schema[name] = kt.to_kronicle_type()
+
+        return schema
 
     @property
     def channel_schema(self) -> dict[str, str]:
         """
         Return a canonical channel schema for the class, including computed fields.
         """
-        schema: dict[str, str] = {}
+        return self._get_channel_schema()
 
-        # Regular fields:  declared_type = field.annotation
-        # Computed fields: declared_type = field.return_type
-        for name, field in self._all_fields.items():
-            declared_type = field.annotation if hasattr(field, "annotation") else field.return_type
-            kt = KronicableTypeChecker(declared_type)
-            schema[name] = kt.to_kronicle_type()
-
-        return schema
+    @classmethod
+    def get_field_descriptions(cls) -> dict[str, str]:
+        """
+        Return a dict mapping field names to their description, if a description was provided.
+        Works safely for both ModelField and FieldInfo.
+        """
+        descriptions = {}
+        for name, field in cls.model_fields.items():
+            # If it's a ModelField, grab its field_info; else assume it's already FieldInfo
+            info = getattr(field, "field_info", field)
+            if info.description is not None:
+                descriptions[name] = info.description
+        return descriptions
 
     # ----------------------------------------------------------------------------------------------
     # Row serialization
@@ -82,7 +92,7 @@ class KronicableSample(BaseModel):
         """
         row: dict[str, Any] = {}
 
-        for name, field in self._all_fields.items():
+        for name, field in self.get_all_fields().items():
             value = getattr(self, name)
             field_type = field.annotation if hasattr(field, "annotation") else field.return_type
             kt = KronicableTypeChecker(field_type)
@@ -110,7 +120,7 @@ class KronicableSample(BaseModel):
 # ------------------------------------------------------------
 # Example usage
 # ------------------------------------------------------------
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     from kronicle_sdk.utils.log import log_d
 
     here = "KronicableSample.tests"

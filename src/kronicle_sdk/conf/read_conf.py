@@ -97,7 +97,7 @@ class Settings:
 
 
 def get_conf(ini_file: str | None = "./.conf/config.ini"):
-    return Settings(ini_file)
+    return Settings(ini_file=ini_file)
 
 
 if __name__ == "__main__":  # pragma: no cover

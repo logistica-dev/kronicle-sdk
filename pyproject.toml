@@ -43,6 +43,12 @@ build-backend = "setuptools.build_meta"
 line-length = 120
 target-version = ['py312']
 
+# ----- Tool: bandit
+[tool.bandit]
+exclude_dirs = ["tests", "build", ".venv"]
+skips = ["B101"]                           # skip assert warnings
+targets = ["src"]
+
 # ----- Tool: commitizen
 [tool.commitizen]
 name = "cz_conventional_commits"

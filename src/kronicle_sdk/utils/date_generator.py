@@ -64,7 +64,7 @@ class DateGenerator:
         if self.jitter is None:
             return timedelta(0)
 
-        seconds = self.jitter.total_seconds() * random.uniform(-1, 1)
+        seconds = self.jitter.total_seconds() * random.uniform(-1, 1)  # nosec B311 - used for generating test dates
         return timedelta(seconds=seconds)
 
     # --------------------------------------------------------
@@ -104,7 +104,7 @@ class DateGenerator:
 # ----------------------------------------------------------------------
 # Main test
 # ----------------------------------------------------------------------
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no-cover
     here = "dategen.test"
     date_gen = DateGenerator(start="2025", increment=36000, jitter_percent=0.3)
     log_d(here, date_gen.get())
