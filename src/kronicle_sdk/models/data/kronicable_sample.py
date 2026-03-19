@@ -108,9 +108,9 @@ class KronicableSample(BaseModel):
 
             if isinstance(value, BaseModel):
                 row[name] = value.model_dump()
-            elif isinstance(value, list) and all(isinstance(v, BaseModel) for v in value):
+            elif isinstance(value, list) and value and all(isinstance(v, BaseModel) for v in value):
                 row[name] = dumps([v.model_dump() for v in value])
-            elif isinstance(value, dict) and all(isinstance(v, BaseModel) for v in value.values()):
+            elif isinstance(value, dict) and value and all(isinstance(v, BaseModel) for v in value.values()):
                 row[name] = dumps({k: v.model_dump() for k, v in value.items()})
             else:
                 row[name] = value
@@ -147,7 +147,7 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "Channel schema", schema)
 
     # --- 1. Proper instantiation with optional None ---
-    metrics = TransferMetrics(start_time=now())
+    metrics = TransferMetrics(start_time=now(), liste2=[])
     row = metrics.to_row()
     print("Row with optional None fields skipped:", row)
     # Expected: 'end_time' and 'error' should NOT appear in row

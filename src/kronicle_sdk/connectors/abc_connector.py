@@ -87,8 +87,8 @@ class KronicleAbstractConnector(ABC):
             KronicleResponseError: If the response is invalid or not JSON.
         """
         here = "_parse"
-        if not response or not response.content:
-            raise KronicleResponseError("No response content received from Kronicle")
+        if response is None:
+            raise KronicleResponseError("No response received from Kronicle")
 
         res_content = response.json() if hasattr(response, "json") else response.content
         if not response.ok:

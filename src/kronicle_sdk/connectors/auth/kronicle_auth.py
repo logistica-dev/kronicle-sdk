@@ -41,12 +41,10 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             timeout=5,
         )
         try:
-            data = self._parse(res)
+            data = self._parse(response=res)
         except Exception:
             log_e(here, "Failed to get a JWT")
             raise
-        if res.status_code and res.status_code > 399:
-            log_e(here, "res", data)
         return self._renew_jwt_from_res(data)
 
     def _renew_jwt_from_res(self, res_json: dict) -> str:
@@ -151,6 +149,6 @@ if __name__ == "__main__":  # pragma: no cover
     if not co:
         raise RuntimeError("Not found: SU credentials")
 
-    log_d(tests, "login", co.usr, co.pwd)
+    log_d(tests, "Trying to login as", co.usr)
     login = KronicleUsrLogin(co.url, co.usr, co.pwd)
     log_d(tests, "jwt", login.jwt)

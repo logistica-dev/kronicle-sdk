@@ -49,7 +49,7 @@ class KronicleHTTPError(KronicleError):
         method: str | None = None,
         url: str | None = None,
     ):
-        if not response or not response.content:
+        if response is None:
             raise KronicleResponseError("No response content received from Kronicle")
 
         if response.status_code and response.status_code == 422:
