@@ -8,7 +8,7 @@ from requests import Response, delete, get, patch, post, put
 
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
-from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.log import log_d, log_e, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
 
 
@@ -71,20 +71,36 @@ class KronicleAbstractConnector(ABC):
         return method.__name__.upper()
         # return f"{method}".split(" ")[1].upper()
 
-    def _parse(self, response: Response, **params) -> Any:
+    def _parse(
+        self,
+        response: Response,
+        *,
+        url: str | None = None,
+        method: str | None = None,
+        should_log=False,
+        **params,
+    ) -> Any:
         """
         Parse a requests.Response object into validated KroniclePayload(s).
 
         Raises:
             KronicleResponseError: If the response is invalid or not JSON.
         """
+        here = "_parse"
         if not response or not response.content:
             raise KronicleResponseError("No response content received from Kronicle")
+
+        res_content = response.json() if hasattr(response, "json") else response.content
+        if not response.ok:
+            if should_log:
+                log_e(here, "Request failed", method, url, "<=", res_content)
+            raise KronicleHTTPError.from_response(response, url=url, method=method)
+        if should_log:
+            log_d(here, "Response received", res_content)
         try:
             data = response.json()
         except Exception as exc:
             raise KronicleResponseError(f"Failed to decode JSON: {response.content}") from exc
-
         return data
 
     def _request(
@@ -129,17 +145,14 @@ class KronicleAbstractConnector(ABC):
             request_kwargs["json"] = json_body
         request_kwargs.setdefault("timeout", getattr(self, "_timeout", 5))  # default timeout 5s
 
-        def func():
-            if should_log:
-                log_d(here, "Request", method_str, url)
+        if should_log:
+            log_d(here, "Request", method_str, url)
+        try:
             response: Response = method(url=url, **request_kwargs)
-            if should_log:
-                log_d(here, "Response", response.json())
-            if response.status_code and response.status_code >= 400:
-                raise KronicleHTTPError.from_response(response, path=url, method=method_str)
-            return self._parse(response=response, strict=strict)
-
-        return self._attempt(func)
+        except Exception as e:
+            log_d(here, "Request failed", method_str, url, "<=", type(e), e)
+            raise
+        return self._parse(response=response, strict=strict)
 
     def _invalidate_cache(self):
         self._metadata_cache = None

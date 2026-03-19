@@ -1,6 +1,5 @@
 # kronicle/connectors/kronicle_login.py
 from json import loads
-from time import sleep
 from typing import Any, Callable
 
 from requests import Response, post
@@ -9,11 +8,9 @@ from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.kronicle_errors import (
-    KronicleConnectionError,
-    KronicleHTTPError,
     KronicleResponseError,
 )
-from kronicle_sdk.utils.log import log_d, log_e, log_w
+from kronicle_sdk.utils.log import log_d, log_e
 from kronicle_sdk.utils.str_utils import decode_b64url, get_type, slash_join
 
 
@@ -31,20 +28,26 @@ class KronicleUsrLogin(KronicleAbstractConnector):
 
     @property
     def jwt(self) -> str:
+        here = "get_jwt"
         if self._jwt and self.is_jwt_valid():
             return self._jwt
 
         # log_d("get_jwt", f"login as '{self.usr}'...")
         login_url = slash_join(self.url, "/auth/v1/login")
-        log_d("jwt", "login_url", login_url)
+        log_d(here, "login_url", login_url)
         res: Response = post(
             url=login_url,
             json={"login": self.usr, "password": self.pwd},
             timeout=5,
         )
+        try:
+            data = self._parse(res)
+        except Exception:
+            log_e(here, "Failed to get a JWT")
+            raise
         if res.status_code and res.status_code > 399:
-            log_e("get_jwt", "res", res.json())
-        return self._renew_jwt_from_res(res.json())
+            log_e(here, "res", data)
+        return self._renew_jwt_from_res(data)
 
     def _renew_jwt_from_res(self, res_json: dict) -> str:
         jwt = res_json.get("access_token")
@@ -118,34 +121,16 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         if json_body is not None:
             request_kwargs["json"] = json_body
 
-        last_exc = None
-        for attempt in range(1, self._retries + 1):
-            try:
-                if should_log:
-                    log_d(here, "Request", method_str, url)
-                response: Response = method(url=url, headers=headers, **request_kwargs)
-                if should_log:
-                    log_d(here, "Response", response.json())
+        try:
+            if should_log:
+                log_d(here, "Request", method_str, url)
+            response: Response = method(url=url, headers=headers, **request_kwargs)
+            return self._parse(response=response, strict=strict)
 
-                if response.status_code and response.status_code == 422:
-                    raise KronicleHTTPError.from_pydantic_response(response, path=url, method=method_str)
-                if response.status_code and response.status_code >= 400:
-                    raise KronicleHTTPError.from_response(response, path=url, method=method_str)
-
-                return self._parse(response=response, strict=strict)
-
-            except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Non-retriable: malformed response or HTTP error
-                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
-                raise exc
-            except Exception as exc:
-                # retriable: network error, timeout, etc.
-                log_d(here, "type(exc)", type(exc))
-                last_exc = exc
-                log_w(here, f"[attempt {attempt}] retriable exception", exc)
-                sleep(self._delay)
-
-        raise KronicleConnectionError(f"Failed to connect to {url} after {self._retries} attempts") from last_exc
+        except Exception as exc:
+            # retriable: network error, timeout, etc.
+            log_e(here, "type(exc)", type(exc))
+            raise
 
     def change_password(self, new_password: str):
         res = self.post(
