@@ -9,7 +9,7 @@ from datetime import datetime
 from types import MappingProxyType, NoneType, UnionType
 from typing import Any, Final, Union, get_args, get_origin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.utils.log import log_w
@@ -29,6 +29,7 @@ STR_TYPES: Final = set(COL_TO_PY_TYPE.keys())
 
 EXT_COL_TO_PY_TYPE = COL_TO_PY_TYPE.copy()
 EXT_COL_TO_PY_TYPE["IsoDateTime"] = IsoDateTime
+EXT_COL_TO_PY_TYPE["EmailStr"] = EmailStr  # type: ignore
 
 EXT_STR_TYPES = set(EXT_COL_TO_PY_TYPE.keys())
 PRIMITIVE_TYPES: Final = tuple(EXT_COL_TO_PY_TYPE.values())
@@ -249,6 +250,7 @@ if __name__ == "__main__":  # pragma: no-cover
     print_kronicable(Optional[Sub], "Optional[Sub]")
     print_kronicable(str | None, "str | None")
     print_kronicable(Sub | None, "Sub | None")
+    print_kronicable(EmailStr)
 
     # --- list ------------------------------------------------------
     print_kronicable(list, "list")
