@@ -1,6 +1,6 @@
 [project]
 name = "kronicle-sdk"
-version = "0.2.9"
+version = "0.2.10"
 description = "SDK to read and write data on a Kronicle microservice"
 authors = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
