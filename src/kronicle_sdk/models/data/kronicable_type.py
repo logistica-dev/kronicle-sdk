@@ -7,7 +7,7 @@ server-compatible type strings.
 
 from datetime import datetime
 from types import MappingProxyType, NoneType, UnionType
-from typing import Any, Final, Union, get_args, get_origin
+from typing import Any, Final, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, EmailStr
 
@@ -107,9 +107,25 @@ class KronicableTypeChecker:
             )
         return args[0]
 
+    def _unwrap_literal(self, typ):
+        """
+        If typ is Literal[...] (e.g., Literal['I','Q']), return the underlying type of the values.
+        Currently only handles literals of uniform types.
+        """
+        origin = get_origin(typ)
+        if origin is Literal:
+            args = get_args(typ)
+            # ensure all args are the same type
+            arg_types = {type(a) for a in args}
+            if len(arg_types) != 1:
+                raise TypeError(f"Literal contains mixed types: {args}")
+            return arg_types.pop()
+        return typ
+
     def is_primitive(self) -> bool:
         """Return True if the type is a supported primitive."""
         typ = self.inner_optional if self.is_optional() else self.annotation
+        typ = self._unwrap_literal(typ)  # <-- unwrap Literal
         return isinstance(typ, type) and issubclass(typ, PRIMITIVE_TYPES)
 
     def is_basemodel(self) -> bool:
@@ -169,7 +185,8 @@ class KronicableTypeChecker:
             inner_type = KronicableTypeChecker(self.inner_optional)
             return f"optional[{inner_type.to_kronicle_type()}]"
 
-        typ = self.annotation
+        # unwrap Literal
+        typ = self._unwrap_literal(self.annotation)
 
         # primitives
         for k, v in COL_TO_PY_TYPE.items():
@@ -251,6 +268,7 @@ if __name__ == "__main__":  # pragma: no-cover
     print_kronicable(str | None, "str | None")
     print_kronicable(Sub | None, "Sub | None")
     print_kronicable(EmailStr)
+    print_kronicable(Literal["O", "I"])
 
     # --- list ------------------------------------------------------
     print_kronicable(list, "list")
