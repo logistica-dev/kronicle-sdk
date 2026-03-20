@@ -139,8 +139,12 @@ class KronicableTypeChecker:
         """
         origin = get_origin(self.annotation)
         args = get_args(self.annotation)
-        if origin is list and len(args) == 1 and isinstance(args[0], type):
-            return KronicableTypeChecker(args[0]).is_valid()
+        if origin is list and len(args) == 1:
+            inner = args[0]
+            if get_origin(inner) is Literal:
+                inner = self._unwrap_literal(inner)
+            if isinstance(inner, type):
+                return KronicableTypeChecker(inner).is_valid()
         return False
 
     def is_valid_dict(self) -> bool:
@@ -150,8 +154,12 @@ class KronicableTypeChecker:
         """
         origin = get_origin(self.annotation)
         args = get_args(self.annotation)
-        if origin is dict and len(args) == 2 and args[0] is str and isinstance(args[1], type):
-            return KronicableTypeChecker(args[1]).is_valid()
+        if origin is dict and len(args) == 2 and args[0] is str:
+            inner = args[1]
+            if get_origin(inner) is Literal:
+                inner = self._unwrap_literal(inner)
+            if isinstance(inner, type):
+                return KronicableTypeChecker(inner).is_valid()
         return False
 
     # ----------------------------------------------------
@@ -275,11 +283,13 @@ if __name__ == "__main__":  # pragma: no-cover
     print_kronicable(list[str], "list[str]")
     print_kronicable(list[int], "list[int]")
     print_kronicable(list[Sub], "list[Sub]")
+    print_kronicable(list[Literal["O", "I"]])
 
     # --- dict[str, BaseModel] -------------------------------------------------
     print_kronicable(dict, "dict")
     print_kronicable(dict[str, int], "dict[str, int]")
     print_kronicable(dict[str, Sub], "dict[str, Sub]")
+    print_kronicable(dict[str, Literal["O", "I"]])
 
     # --- invalid types ---------------------------------------------------------
     print("\n=== Not allowed ===\n")
