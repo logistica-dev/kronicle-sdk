@@ -4,7 +4,6 @@ build
 commitizen
 flake8
 ipykernel
-pip-autoremove
 pip-chill
 pip-upgrade-outdated
 pre-commit

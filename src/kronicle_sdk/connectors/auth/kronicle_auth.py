@@ -41,7 +41,7 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             timeout=5,
         )
         try:
-            data = self._parse(response=res)
+            data = KronicleUsrLogin._parse(self, response=res, strict=False)
         except Exception:
             log_e(here, "Failed to get a JWT")
             raise

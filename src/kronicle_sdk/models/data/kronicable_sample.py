@@ -117,6 +117,62 @@ class KronicableSample(BaseModel):
         return row
 
 
+class KronicableFlatSample(KronicableSample):
+    """
+    A KronicableSample that flattens all one-level BaseModel fields
+    into top-level columns for .channel_schema and .to_row().
+    """
+
+    @classmethod
+    def _extract_schema(cls, name, declared_type, schema):
+        if isinstance(declared_type, type) and issubclass(declared_type, KronicableSample):
+            schema.update(declared_type._get_channel_schema())
+        elif isinstance(declared_type, type) and issubclass(declared_type, BaseModel):
+            for n, f in declared_type.model_fields.items():
+                schema[n] = KronicableTypeChecker(f.annotation).to_kronicle_type()
+        else:
+            schema[name] = KronicableTypeChecker(declared_type).to_kronicle_type()
+
+    @classmethod
+    def _get_channel_schema(cls) -> dict[str, str]:
+        schema: dict[str, str] = {}
+        for name, field in cls.model_fields.items():
+            cls._extract_schema(name, getattr(field, "annotation", Any), schema)
+        for name, field in cls.model_computed_fields.items():
+            cls._extract_schema(name, getattr(field, "return_type", Any), schema)
+        return schema
+
+    @classmethod
+    def _extract_row(cls, value, row: dict[str, Any]):
+        """Helper to flatten a single value into the row dict."""
+        if value is None:
+            return
+        if isinstance(value, KronicableSample):
+            # Flatten nested KronicableSample recursively
+            row.update(value.to_row())
+        elif isinstance(value, BaseModel):
+            # Flatten other BaseModels via model_dump()
+            row.update(value.model_dump())
+        else:
+            # Primitive value
+            return value
+
+    def to_row(self) -> dict[str, Any]:
+        """Override to_row to flatten nested BaseModels."""
+        row: dict[str, Any] = {}
+        # Flatten regular fields
+        for name, _ in self.__class__.model_fields.items():
+            extracted = self._extract_row(getattr(self, name), row)
+            if extracted is not None:
+                row[name] = extracted
+        # Flatten computed fields
+        for name, _ in self.__class__.model_computed_fields.items():
+            extracted = self._extract_row(getattr(self, name), row)
+            if extracted is not None:
+                row[name] = extracted
+        return row
+
+
 # ------------------------------------------------------------
 # Example usage
 # ------------------------------------------------------------
