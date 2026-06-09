@@ -44,6 +44,10 @@ def uuid4_str() -> str:
     return str(uuid4())
 
 
+def uuid_to_str(u: UUID | None) -> str | None:
+    return u.hex if u else None
+
+
 def validate_orcid(v: str) -> str:
     v = v.strip()
     # Match optional https://, optional http://, then orcid.org/, then the 4-digit groups

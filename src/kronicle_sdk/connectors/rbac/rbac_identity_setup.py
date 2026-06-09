@@ -1,10 +1,12 @@
+# kronicle_sdk/connectors/rbac/rbac_identity_setup.py
 from uuid import UUID
 
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
+from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 
 
-class KronicleRbacConnector(KronicleUsrLogin):
+class KronicleRbacIdentitySetup(KronicleUsrLogin):
     def __init__(self, url: str, usr: str, pwd: str) -> None:
         super().__init__(url, usr, pwd)
 
@@ -58,3 +60,33 @@ class KronicleRbacConnector(KronicleUsrLogin):
     def remove_user_by_id(self, id: UUID) -> KronicleUser:
         usr = self.delete(route=f"/users/{id}?remove=true")
         return KronicleUser(**usr)
+
+    # ----------------------------------------------------------------------------------------------
+    # Groups
+    # ----------------------------------------------------------------------------------------------
+
+    def create_group(self, group: KronicleGroup) -> KronicleGroup:
+        res = self.post(route="/groups", body=group.to_json())
+        return KronicleGroup(**res)
+
+    def get_groups(self) -> list[KronicleGroup]:
+        groups = self.get(route="/groups")
+        return [KronicleGroup(**g) for g in groups]
+
+    def get_group(self, group_id: UUID) -> KronicleGroup | None:
+        res = self.get(route=f"/groups/{group_id}")
+        return KronicleGroup(**res) if res else None
+
+    def patch_group(self, group_id: UUID, group: KronicleGroup) -> KronicleGroup:
+        res = self.patch(route=f"/groups/{group_id}", body=group.to_json())
+        return KronicleGroup(**res)
+
+    def delete_group(self, group_id: UUID) -> KronicleGroup | None:
+        res = self.delete(route=f"/groups/{group_id}")
+        return KronicleGroup(**res) if res else None
+
+    def add_user_to_group(self, group_id: UUID, user_id: UUID) -> dict:
+        return self.post(route=f"/groups/{group_id}/users?user_id={user_id}")
+
+    def remove_user_from_group(self, group_id: UUID, user_id: UUID) -> dict:
+        return self.delete(route=f"/groups/{group_id}/users/{user_id}")
