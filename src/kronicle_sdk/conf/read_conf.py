@@ -74,7 +74,13 @@ class Settings:
             self.connection_su = None
             log_d(here, "No credentials found for SU.")
 
-    def get_setting(self, *, env: str | None = None, param: str | None = None, default: Any | None = None):
+    def get_setting(
+        self,
+        *,
+        env: str | None = None,
+        param: str | None = None,
+        default: Any | None = None,
+    ):
         """
         Retrieve a setting from an environment variable or, alternatively, an ini file.
         If both are set, values from ENV are preferred.

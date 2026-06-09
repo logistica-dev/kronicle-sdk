@@ -120,9 +120,9 @@ class KronicleHTTPError(KronicleError):
                     status=response.status_code or 400,
                     url=response.request.url if response.request else url,
                     method=response.request.method if response.request else method,
-                    error="UnprocessableContent",
-                    message="Incorrect payload",
-                    details=res_json.get("detail"),
+                    error=res_json.get("error") or "UnprocessableContent",
+                    message=res_json.get("message") or "Incorrect payload",
+                    details=res_json.get("detail") or res_json.get("details"),
                 )
             )
         except Exception:

@@ -110,6 +110,7 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         here = f"{get_type(self)}.request"
         url = self._join(route)
         method_str = self.method_str(method)
+        log_d(here, method_str, url)
 
         json_body = self._serialize_payload(body)
         headers = {"Authorization": f"Bearer {self.jwt}"}

@@ -4,7 +4,8 @@ from typing import Any
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
-from kronicle_sdk.models.iso_datetime import IsoDateTime
+from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
+from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
 class KronicleWriter(KronicleAbstractChannelConnector):
@@ -37,9 +38,7 @@ class KronicleWriter(KronicleAbstractChannelConnector):
 
 
 if __name__ == "__main__":  # pragma: no-cover
-    from kronicle_sdk.models.iso_datetime import now_local
     from kronicle_sdk.utils.log import log_d
-    from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
     here = "KronicleWriter"
     log_d(here)
@@ -47,13 +46,18 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "Connecting to", co.url)
     kronicle_writer = KronicleWriter(co.url, co.usr, co.pwd)
     [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
-    max_chan_id, _ = kronicle_writer.get_channel_with_max_rows()
-    if max_chan_id:
+    max_chan = kronicle_writer.get_channel_with_max_rows()
+    if max_chan and (max_chan_id := max_chan.channel_id):
         log_d(here, "channel with max rows", kronicle_writer.get_channel(max_chan_id))
-        rows: list = kronicle_writer.get_rows_for_channel(max_chan_id, "dict")  # type:ignore
+        rows = kronicle_writer.get_rows_for_channel(max_chan_id)
+        assert isinstance(rows, list)
         for i, row in enumerate(rows):
             log_d(here, f"row {i}", row)
         log_d(here, "nb rows", len(rows))
+
+        cols = kronicle_writer.get_cols_for_channel(max_chan_id)
+        assert isinstance(cols, dict)
+        log_d(here, "cols", cols)
 
     channel_id = uuid4_str()
     channel_name = f"demo_channel_{tiny_id()}"
@@ -73,11 +77,17 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "payload", payload)
     result = kronicle_writer.insert_rows_and_upsert_channel(payload)
     log_d(here, "result", result)
-    log_d(here, "channels", kronicle_writer.get_all_channels(should_log=True))
-    log_d(
-        here,
-        "channels",
-        kronicle_writer.get(route="channels"),
-    )
+    # log_d(here, "channels", kronicle_writer.get_all_channels(should_log=True))
+    # log_d(
+    #     here,
+    #     "channels",
+    #     kronicle_writer.get(route="channels"),
+    # )
 
-    log_d(here, "channels", kronicle_writer.get_channel(channel_id))
+    id = "592bc15e-9aa4-44d0-b18e-9b168572690c"
+    payload = kronicle_writer._ensure_is_payload_or_none(
+        kronicle_writer.get(
+            route=f"channels/{id}/rows?min[time]=2026-03-31T12:04:14.476554Z&max[time]=2026-03-31T12:04:14.476554Z"
+        )
+    )
+    log_d(here, "payload", payload)

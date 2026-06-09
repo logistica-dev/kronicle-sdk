@@ -1,6 +1,7 @@
 # kronicle/connectors/channel/abc_channel_connector.py
 from abc import abstractmethod
-from typing import Any, Callable, Literal, Tuple
+from typing import Any, Callable, Literal
+from urllib.parse import quote
 from uuid import UUID
 
 from requests import Response, delete, get, patch, post, put
@@ -9,7 +10,7 @@ from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
-from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type
+from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -136,29 +137,40 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         """Retrieve a channel by its channel_id."""
         return self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
 
-    def get_channel_by_channel_name(self, channel_name):
+    def get_channel_with_name(self, channel_name):
         """
         Retrieve the first channel matching a channel_name.
 
         Returns:
             KroniclePayload if found, else None.
         """
-        for channel in self.all_channels:
-            if channel.channel_name == channel_name:
-                return channel
-        log_d("get_channel_by_channel_name", "Could not found any channel with name", channel_name)
-        return
+        return self._ensure_is_payload_or_none(self.get(route=f"channels/?name={channel_name}"))
 
-    def get_channel_with_max_rows(self) -> Tuple[UUID | None, int | None]:
-        max_available_rows = 0
-        channel_id = None
-        for channel in self.all_channels:
-            if channel.available_rows and channel.available_rows > max_available_rows:
-                max_available_rows = channel.available_rows
-                channel_id = channel.channel_id
-        if max_available_rows > 0:
-            return channel_id, max_available_rows
-        return None, None
+    def get_channel_with_tags(self, tags: dict[str, str]) -> list[KroniclePayload]:
+        """
+        Retrieve the channels matching the input tags.
+
+        Returns:
+            list[KroniclePayload]
+        """
+        tags_str = ",".join(f"{normalize_column_name(k)}:{v}" for k, v in tags.items())
+        log_d("get_channel_with_tags", "tags_str", tags_str)
+        return self._ensure_is_payload_list(self.get(route=f"channels/?tags={quote(tags_str)}"))
+
+    def get_channel_with_meta(self, metadata: dict[str, str]) -> list[KroniclePayload]:
+        """
+        Retrieve the channels matching the input metadata.
+
+        Returns:
+            list[KroniclePayload]
+        """
+        meta_str = ",".join(f"{normalize_column_name(k)}:{v}" for k, v in metadata.items())
+        log_d("get_channel_with_meta", "meta_str", meta_str)
+        return self._ensure_is_payload_list(self.get(route=f"channels/?metadata={quote(meta_str)}"))
+
+    def get_channel_with_max_rows(self) -> KroniclePayload | None:
+        max_channel = max(self.all_channels, key=lambda chan: chan.available_rows or 0)
+        return max_channel
 
     def get_rows_for_channel(
         self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "list"
@@ -169,12 +181,17 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         Args:
             return_type: 'dict' returns raw rows, 'str' returns string repr.
         """
-        result = self._ensure_is_payload(self.get(route=f"channels/{check_is_uuid4(id)}/rows"))
+        here = "get_rows_for_chan"
+        log_d(here, "id", id)
+        res = self.get(route=f"channels/{check_is_uuid4(id)}/rows")
+        log_d(here, "res", res)
+        payload = self._ensure_is_payload(res)
+        log_d(here, "payload", payload)
         match return_type:
             case "str":
-                return str(result.rows)
+                return str(payload.rows)
             case "list" | "dict":
-                return result.rows
+                return payload.rows
         raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
     def get_cols_for_channel(self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "dict"):

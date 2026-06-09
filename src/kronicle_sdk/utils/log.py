@@ -11,7 +11,7 @@ def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def log(*args):  # pragma: no cover
+def log(*args, **kwargs):  # pragma: no cover
     if SHOULD_LOG:
         if len(args) < 2:
             print(f"D {_now()}")
@@ -30,19 +30,19 @@ def log(*args):  # pragma: no cover
             print(f"{start_line}", str(*args[3:]))
 
 
-def log_e(*args):  # pragma: no cover
+def log_e(*args, **kwargs):  # pragma: no cover
     log("E", *args)
 
 
-def log_w(*args):  # pragma: no cover
+def log_w(*args, **kwargs):  # pragma: no cover
     log("W", *args)
 
 
-def log_d(*args):  # pragma: no cover
-    log("D", *args)
+def log_d(*args, **kwargs):  # pragma: no cover
+    log("D", *args, **kwargs)
 
 
-def log_d_if(should_print: bool, *args):  # pragma: no cover
+def log_d_if(should_print: bool, *args, **kwargs):  # pragma: no cover
     if should_print:
         log_d(*args)
 

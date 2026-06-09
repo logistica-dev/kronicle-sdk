@@ -72,8 +72,8 @@ if __name__ == "__main__":  # pragma: no-cover
     [log_d(here, f"channel {channel.channel_id}", channel) for channel in kronicle_setup.all_channels]
     log_d(here, "Channel list ^^^")
 
-    max_chan_id, _ = kronicle_setup.get_channel_with_max_rows()
-    if max_chan_id:
+    max_chan = kronicle_setup.get_channel_with_max_rows()
+    if max_chan and (max_chan_id := max_chan.channel_id):
         log_d(here, "channel with max rows", kronicle_setup.get_channel(max_chan_id))
         rows: list = kronicle_setup.get_rows_for_channel(max_chan_id, "dict")  # type:ignore
         for i, row in enumerate(rows):
