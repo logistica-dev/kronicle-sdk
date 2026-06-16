@@ -5,7 +5,7 @@ from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 
 
-class KronicleRbacResourceSetup(KronicleUsrLogin):
+class KronicleCore(KronicleUsrLogin):
     def __init__(self, url: str, usr: str, pwd: str) -> None:
         super().__init__(url, usr, pwd)
 
@@ -46,7 +46,9 @@ class KronicleRbacResourceSetup(KronicleUsrLogin):
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 
-    def get_core_channels(self) -> list[dict]:
+    def get_core_channels(self, zone_id: UUID | str | None = None) -> list[dict]:
+        if zone_id:
+            return self.get(route=f"/zones/{zone_id}/channels")
         return self.get(route="/channels")
 
     def get_core_channel(self, channel_id: UUID | str) -> dict | None:

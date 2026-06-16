@@ -1,11 +1,14 @@
 # kronicle/connectors/channel/kronicle_writer.py
 from typing import Any
+from uuid import UUID
 
 from kronicle_sdk.conf.read_conf import Settings
-from kronicle_sdk.connectors.channel.abc_channel_connector import KronicleAbstractChannelConnector
+from kronicle_sdk.connectors.channel.abc_channel_connector import (
+    KronicleAbstractChannelConnector,
+)
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
-from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
+from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
 
 class KronicleWriter(KronicleAbstractChannelConnector):
@@ -21,15 +24,22 @@ class KronicleWriter(KronicleAbstractChannelConnector):
     def prefix(self) -> str:
         return "/data/v1"
 
-    def insert_rows_and_upsert_channel(self, body: KroniclePayload | dict):
+    def create_channel(self, body: KroniclePayload | dict, *, zone_id: UUID | str):
         """Creates a new channel if it doesn't exist already and insert data rows"""
+        zone_id = ensure_uuid4(zone_id)
         payload = self._ensure_body_as_payload(body)
-        return self.post(route="channels", body=payload)
+        return self.post(route=f"zones/{zone_id}/channels", body=payload)
 
-    def add_row(self, body: KroniclePayload | dict):
+    def insert_rows_and_update_channel(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         payload = self._ensure_body_as_payload(body)
-        return self.insert_rows_and_upsert_channel(body=payload)
+        channel_id = ensure_uuid4(payload.channel_id)
+        return self.post(route=f"channels/{channel_id}", body=payload)
+
+    # def add_rows(self, body: KroniclePayload | dict):
+    #     """Creates a new channel if it doesn't exist already and insert data rows"""
+    #     payload = self._ensure_body_as_payload(body)
+    #     return self.insert_rows_and_upsert_channel(body=payload)
 
     def insert_rows(self, id, rows: list[dict[str, Any]]):
         """Insert rows for an existing channel"""
@@ -44,7 +54,7 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here)
     co = Settings().connection
     log_d(here, "Connecting to", co.url)
-    kronicle_writer = KronicleWriter(co.url, co.usr, co.pwd)
+    kronicle_writer = KronicleWriter.from_connection_info(co)
     [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
     max_chan = kronicle_writer.get_channel_with_max_rows()
     if max_chan and (max_chan_id := max_chan.channel_id):
@@ -75,7 +85,7 @@ if __name__ == "__main__":  # pragma: no-cover
         ],
     }
     log_d(here, "payload", payload)
-    result = kronicle_writer.insert_rows_and_upsert_channel(payload)
+    result = kronicle_writer.insert_rows_and_update_channel(payload)
     log_d(here, "result", result)
     # log_d(here, "channels", kronicle_writer.get_all_channels(should_log=True))
     # log_d(

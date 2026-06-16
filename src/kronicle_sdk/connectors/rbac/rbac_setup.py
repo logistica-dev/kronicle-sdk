@@ -75,16 +75,12 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.post(route="/groups", body=group.to_json())
         return KronicleGroup(**res)
 
-    def get_groups(self) -> list[KronicleGroup]:
+    def get_all_groups(self) -> list[KronicleGroup]:
         groups = self.get(route="/groups")
         return [KronicleGroup(**g) for g in groups]
 
-    def get_group_by_id(self, group_id: UUID) -> KronicleGroup | None:
+    def get_group(self, group_id: UUID) -> KronicleGroup | None:
         res = self.get(route=f"/groups/{group_id}")
-        return KronicleGroup(**res) if res else None
-
-    def get_group_by_name(self, name: str) -> KronicleGroup | None:
-        res = self.get(route=f"/groups?name={name}")
         return KronicleGroup(**res) if res else None
 
     def patch_group(self, group_id: UUID, group: KronicleGroup) -> KronicleGroup:

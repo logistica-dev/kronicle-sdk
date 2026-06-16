@@ -1,13 +1,15 @@
 # kronicle/connectors/channel/kronicle_setup.py
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
+from kronicle_sdk.connectors.rbac.core_setup import KronicleCore
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.kronicle_errors import KronicleOperationError
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_w
-from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
+from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
 
 class KronicleSetup(KronicleWriter):
@@ -22,9 +24,11 @@ class KronicleSetup(KronicleWriter):
     def column_types(self):
         return self.get(route="schemas/column_types", strict=False)
 
-    def create_channel(self, body: KroniclePayload | dict):
-        self._ensure_payload_id(body)
-        return self.post(route="channels", body=body)
+    def create_channel(self, body: KroniclePayload | dict, *, zone_id: UUID | str):
+        """Creates a new channel in a zone and inserts data rows."""
+        zone_id = ensure_uuid4(zone_id)
+        payload = self._ensure_body_as_payload(body)
+        return self.post(route=f"zones/{zone_id}/channels", body=payload, prefix="/data/v1")
 
     def upsert_channel(self, body: KroniclePayload | dict):
         self._ensure_payload_id(body)
@@ -67,7 +71,7 @@ if __name__ == "__main__":  # pragma: no-cover
     here = "ksetup"
     log_d(here)
     co = Settings().connection
-    kronicle_setup = KronicleSetup(co.url, co.usr, co.pwd)
+    kronicle_setup = KronicleSetup.from_connection_info(co)
     log_d(here, "Channel list vvv")
     [log_d(here, f"channel {channel.channel_id}", channel) for channel in kronicle_setup.all_channels]
     log_d(here, "Channel list ^^^")
@@ -97,10 +101,16 @@ if __name__ == "__main__":  # pragma: no-cover
         ],
     }
     log_d(here, "payload", payload)
-    result = kronicle_setup.insert_rows_and_upsert_channel(payload)
+    core_setup = KronicleCore.from_connection_info(co)
+    zone_id = uuid4()
+    zone = KronicleZone(id=zone_id, name="test_channel_setup_zone", details={"test": True})
+    core_setup.create_zone(zone)
+    result = kronicle_setup.create_channel(payload, zone_id=zone_id)
     log_d(here, "result", result)
     log_d(here, "column types", kronicle_setup.column_types)
     try:
         kronicle_setup.get(route="route/that/does/not/exist", strict=False)
     except Exception as e:
         log_w(here, "OK, exception caught:", e)
+
+    core_setup.delete_zone(zone_id)

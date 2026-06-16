@@ -32,9 +32,9 @@ class KronicleAbstractConnector(ABC):
     def prefix(self) -> str:
         raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', 'setup/v1', 'auth/v1'...")
 
-    def _join(self, route: str | None) -> str:
-        """Join base URL, prefix, and route into a full URL."""
-        return slash_join(self.url, self.prefix, route)
+    def _join(self, route: str | None, *, prefix: str | None = None) -> str:
+        """Join base URL, prefix, and route into a full URL. Optionally override prefix."""
+        return slash_join(self.url, prefix or self.prefix, route)
 
     # ----------------------------------------------------------------------------------------------
     # Internal helpers
@@ -111,6 +111,7 @@ class KronicleAbstractConnector(ABC):
         *,
         strict: bool = True,
         should_log: bool = False,
+        prefix: str | None = None,
         **params,
     ) -> Any:
         """
@@ -124,6 +125,7 @@ class KronicleAbstractConnector(ABC):
             route: route path to append to base URL
             body: optional payload (dict or KroniclePayload)
             strict: validate the response as KroniclePayload(s)
+            prefix: override the class prefix (e.g. "/data/v1")
             params: URL query parameters or other requests kwargs
 
         Raises:
@@ -133,7 +135,7 @@ class KronicleAbstractConnector(ABC):
             TypeError: body type is invalid
         """
         here = f"{get_type(self)}.req"
-        url = self._join(route)
+        url = self._join(route, prefix=prefix)
         method_str = self.method_str(method)
         if method_str != "GET":
             self._invalidate_cache()
@@ -192,10 +194,10 @@ class KronicleAbstractConnector(ABC):
                 )
         return res
 
-    def _ensure_body_as_payload(self, body: KroniclePayload | dict):
+    def _ensure_body_as_payload(self, body: KroniclePayload | dict) -> KroniclePayload:
         return body if isinstance(body, KroniclePayload) else KroniclePayload.from_json(body)
 
-    def _ensure_payload_id(self, body: KroniclePayload | dict):
+    def _ensure_payload_id(self, body: KroniclePayload | dict) -> str:
         here = "abc_connector._ensure_payload_id"
         log_d(here, "type(body)", type(body).__name__)
         log_d(here, "body", body)
@@ -210,29 +212,36 @@ class KronicleAbstractConnector(ABC):
     # HTTP verbs
     # ----------------------------------------------------------------------------------------------
 
-    def get(self, route: str | None = None, **params) -> Any:
+    def get(self, route: str | None = None, *, prefix: str | None = None, **params) -> Any:
         """Perform a GET request and return validated payload(s)."""
-        return self._request(get, route=route, timeout=self.timeout, **params)
+        return self._request(get, route=route, prefix=prefix, timeout=self.timeout, **params)
 
-    def post(self, route: str | None = None, body: KroniclePayload | dict | None = None, **params) -> Any:
+    def post(
+        self,
+        route: str | None = None,
+        body: KroniclePayload | dict | None = None,
+        *,
+        prefix: str | None = None,
+        **params,
+    ) -> Any:
         """Perform a POST request with validation."""
-        return self._request(post, route=route, body=body, timeout=self.timeout, **params)
+        return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
 
-    def put(self, route: str, body: KroniclePayload | dict, **params) -> Any:
+    def put(self, route: str, body: KroniclePayload | dict, *, prefix: str | None = None, **params) -> Any:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(put, route=route, body=body, timeout=self.timeout, **params)
+        return self._request(put, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
 
-    def patch(self, route: str, body: KroniclePayload | dict, **params) -> Any:
+    def patch(self, route: str, body: KroniclePayload | dict, *, prefix: str | None = None, **params) -> Any:
         """Perform a PATCH request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(patch, route=route, timeout=self.timeout, body=body, **params)
+        return self._request(patch, route=route, prefix=prefix, timeout=self.timeout, body=body, **params)
 
-    def delete(self, route: str, **params) -> Any:
+    def delete(self, route: str, *, prefix: str | None = None, **params) -> Any:
         """Perform a DELETE request and return validated payload(s)."""
-        return self._request(delete, route=route, timeout=self.timeout, **params)
+        return self._request(delete, route=route, prefix=prefix, timeout=self.timeout, **params)
 
     # ----------------------------------------------------------------------------------------------
     # Health check

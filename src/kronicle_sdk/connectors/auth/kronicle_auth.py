@@ -2,9 +2,7 @@
 from json import loads
 from typing import Any, Callable
 
-from requests import Response, post
-
-from kronicle_sdk.conf.read_conf import Settings
+from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.kronicle_errors import (
@@ -12,6 +10,7 @@ from kronicle_sdk.models.kronicle_errors import (
 )
 from kronicle_sdk.utils.log import log_d, log_e
 from kronicle_sdk.utils.str_utils import decode_b64url, get_type, slash_join
+from requests import Response, post
 
 
 class KronicleUsrLogin(KronicleAbstractConnector):
@@ -21,6 +20,10 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         self.pwd = pwd
         self._jwt: str | None = None
         self._exp: int | None = None
+
+    @classmethod
+    def from_connection_info(cls, co: ConnectionInformation):
+        return cls(url=co.url, usr=co.usr, pwd=co.pwd)
 
     @property
     def prefix(self) -> str:
@@ -151,5 +154,5 @@ if __name__ == "__main__":  # pragma: no cover
         raise RuntimeError("Not found: SU credentials")
 
     log_d(tests, "Trying to login as", co.usr)
-    login = KronicleUsrLogin(co.url, co.usr, co.pwd)
+    login = KronicleUsrLogin.from_connection_info(co)
     log_d(tests, "jwt", login.jwt)

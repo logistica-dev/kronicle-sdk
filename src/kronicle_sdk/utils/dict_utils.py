@@ -52,7 +52,18 @@ if __name__ == "__main__":  # pragma: no-cover
     print(
         here,
         "strip_nulls dict:",
-        strip_nulls({"a": 3, "b": 0, "5": "zeruiogh", "d": None, "e": {"g": None, "h": "totot"}}, True),
+        strip_nulls(
+            {
+                "a": 3,
+                "b": 0,
+                "5": "zeruiogh",
+                "d": None,
+                "e": {"g": None, "h": "totot"},
+            },
+            True,
+        ),
     )
     print(here, "strip_nulls tutu:", strip_nulls("tutu"))
     print(here, "strip_nulls None:", strip_nulls(None))
+
+    print(skip_nones({"a": True, "b": False, "c": None, "d": {}}))

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import re
+from json import dumps
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
-
 from kronicle_sdk.utils.dict_utils import skip_nones
 from kronicle_sdk.utils.str_utils import uuid_to_str
+from pydantic import BaseModel, field_validator
 
 _COMMON_PASSWORDS = frozenset(
     {
@@ -96,6 +96,8 @@ class KronicleUser(BaseModel):
     orcid: str | None = None
     full_name: str | None = None
     details: dict[str, Any] | None = None
+    is_active: bool | None = None
+    is_su: bool | None = None
 
     @field_validator("password")
     @classmethod
@@ -107,6 +109,30 @@ class KronicleUser(BaseModel):
     def validate_name_syntax(cls, v: str | None) -> str | None:
         return _validate_name(v)
 
+    @field_validator("is_active")
+    @classmethod
+    def validate_is_active(cls, v: bool | None) -> bool | None:
+        return False if v is False else None
+
+    @field_validator("is_su")
+    @classmethod
+    def validate_is_su(cls, v: bool | None) -> bool | None:
+        return True if v is True else None
+
+    # # Include is_su in dict/json output
+    def model_dump(self, *args, **kwargs):
+        d = super().model_dump(*args, **kwargs)
+        # if self._is_su:
+        #     d["is_su"] = True
+        return skip_nones(d)
+
+    # Include is_su in JSON output
+    def model_dump_json(self, *args, **kwargs):
+        return dumps(self.to_json())
+        # return super().model_dump_json(
+        #     *args, **kwargs, **{"include": {"is_su"} if self._is_su else {}}
+        # )
+
     def to_json(self) -> dict:
         return skip_nones(
             {
@@ -116,8 +142,10 @@ class KronicleUser(BaseModel):
                 "orcid": self.orcid,
                 "full_name": self.full_name,
                 "password": self.password,
+                "is_active": False if self.is_active is False else None,
+                "is_su": True if self.is_su is True else None,
             }
         )
 
     def __str__(self) -> str:
-        return f"User {self.to_json()}"
+        return f"User {dumps(self.to_json())}"

@@ -4,13 +4,12 @@ from typing import Any, Callable, Literal
 from urllib.parse import quote
 from uuid import UUID
 
-from requests import Response, delete, get, patch, post, put
-
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
+from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -67,7 +66,14 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         should_log: bool = False,
         **params,
     ) -> KroniclePayload | list[KroniclePayload]:
-        return super()._request(method=method, route=route, body=body, strict=strict, should_log=should_log, **params)
+        return super()._request(
+            method=method,
+            route=route,
+            body=body,
+            strict=strict,
+            should_log=should_log,
+            **params,
+        )
 
     def _invalidate_cache(self):
         self._metadata_cache = None
@@ -92,7 +98,10 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         return self._request(get, route=route, **params)
 
     def post(
-        self, route: str | None = None, body: KroniclePayload | dict | None = None, **params
+        self,
+        route: str | None = None,
+        body: KroniclePayload | dict | None = None,
+        **params,
     ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a POST request with validation."""
         return self._request(post, route=route, body=body, **params)

@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, field_validator
 
 from kronicle_sdk.utils.dict_utils import skip_nones
-from kronicle_sdk.utils.str_utils import uuid_to_str
+from kronicle_sdk.utils.str_utils import ensure_uuid4, uuid_to_str
 
 _NAME_REGEX = r"[A-Za-z][A-Za-z0-9_ .-]{3,63}"
 
@@ -27,6 +27,13 @@ class KronicleGroup(BaseModel):
     id: UUID | None = None
     name: str | None = None
     details: dict[str, Any] | None = None
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str | UUID | None) -> UUID | None:
+        if not v:
+            return uuid4()
+        return ensure_uuid4(v)
 
     @field_validator("name")
     @classmethod
