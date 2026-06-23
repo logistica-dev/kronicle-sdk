@@ -3,6 +3,8 @@ from typing import Any
 from pydantic import BaseModel
 from requests import Response
 
+from kronicle_sdk.utils.log import log_d, log_w
+
 
 class KronicleError(Exception):
     """Base class for all Kronicle SDK errors."""
@@ -49,6 +51,7 @@ class KronicleHTTPError(KronicleError):
         method: str | None = None,
         url: str | None = None,
     ):
+        here = "from_response"
         if response is None:
             raise KronicleResponseError("No response content received from Kronicle")
 
@@ -60,6 +63,22 @@ class KronicleHTTPError(KronicleError):
             )
         try:
             res = response.json()
+            log_w(here, "res", res)
+            if res.get("message"):
+                try:
+                    return cls(
+                        KronicleHTTPErrorModel(
+                            status=res.get("status"),
+                            error=res.get("error"),
+                            message=res.get("message"),
+                            details=res.get("details"),
+                            method=res.get("method"),
+                            url=res.get("url") or res.get("path"),
+                            request_id=res.get("request_id"),
+                        )
+                    )
+                except Exception:
+                    pass
             detail = res.get("detail")
             if detail:
                 message = (detail.get("message"),)
@@ -113,8 +132,10 @@ class KronicleHTTPError(KronicleError):
 
     @classmethod
     def from_pydantic_response(cls, response: Response, url: str | None = None, method: str | None = None):
+        here = "from_pydantic_response"
         try:
             res_json = response.json()
+            log_d(here, res_json)
             return cls(
                 KronicleHTTPErrorModel(
                     status=response.status_code or 400,

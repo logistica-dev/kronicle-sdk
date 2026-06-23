@@ -1,4 +1,4 @@
-# kronicle_sdk/connectors/rbac/rbac_resource_setup.py
+# kronicle_sdk/connectors/rbac/core_setup.py
 from uuid import UUID
 
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
@@ -17,19 +17,19 @@ class KronicleCore(KronicleUsrLogin):
     # Zones
     # ----------------------------------------------------------------------------------------------
 
+    def get_all_zones(self) -> list[KronicleZone]:
+        zones = self.get(route="/zones")
+        return [KronicleZone(**z) for z in zones]
+
+    def get_zone_by_id(self, *, zone_id: UUID) -> KronicleZone | None:
+        res = self.get(route=f"/zones/{zone_id}")
+        return KronicleZone(**res) if res else None
+
     def create_zone(self, zone: KronicleZone) -> KronicleZone:
         res = self.post(route="/zones", body=zone.to_json())
         return KronicleZone(**res)
 
-    def get_zones(self) -> list[KronicleZone]:
-        zones = self.get(route="/zones")
-        return [KronicleZone(**z) for z in zones]
-
-    def get_zone(self, zone_id: UUID | str) -> KronicleZone | None:
-        res = self.get(route=f"/zones/{zone_id}")
-        return KronicleZone(**res) if res else None
-
-    def patch_zone(self, zone_id: UUID | str, name: str | None = None, details: dict | None = None) -> KronicleZone:
+    def patch_zone(self, *, zone_id: UUID, name: str | None = None, details: dict | None = None) -> KronicleZone:
         body = {}
         if name is not None:
             body["name"] = name
@@ -38,7 +38,7 @@ class KronicleCore(KronicleUsrLogin):
         res = self.patch(route=f"/zones/{zone_id}", body=body)
         return KronicleZone(**res)
 
-    def delete_zone(self, zone_id: UUID | str) -> KronicleZone | None:
+    def delete_zone(self, *, zone_id: UUID) -> KronicleZone | None:
         res = self.delete(route=f"/zones/{zone_id}")
         return KronicleZone(**res) if res else None
 
@@ -46,21 +46,22 @@ class KronicleCore(KronicleUsrLogin):
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 
-    def get_core_channels(self, zone_id: UUID | str | None = None) -> list[dict]:
+    def get_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
         if zone_id:
             return self.get(route=f"/zones/{zone_id}/channels")
         return self.get(route="/channels")
 
-    def get_core_channel(self, channel_id: UUID | str) -> dict | None:
+    def get_core_channel(self, *, channel_id: UUID) -> dict | None:
         res = self.get(route=f"/channels/{channel_id}")
         return res if res else None
 
     def patch_core_channel(
         self,
-        channel_id: UUID | str,
+        *,
+        channel_id: UUID,
         name: str | None = None,
         details: dict | None = None,
-        zone_id: UUID | str | None = None,
+        zone_id: UUID | None = None,
     ) -> dict:
         body = {}
         if name is not None:

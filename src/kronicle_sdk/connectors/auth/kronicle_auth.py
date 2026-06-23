@@ -9,7 +9,7 @@ from kronicle_sdk.models.kronicle_errors import (
     KronicleResponseError,
 )
 from kronicle_sdk.utils.log import log_d, log_e
-from kronicle_sdk.utils.str_utils import decode_b64url, get_type, slash_join
+from kronicle_sdk.utils.str_utils import decode_b64url, slash_join
 from requests import Response, post
 
 
@@ -37,7 +37,7 @@ class KronicleUsrLogin(KronicleAbstractConnector):
 
         # log_d("get_jwt", f"login as '{self.usr}'...")
         login_url = slash_join(self.url, "/auth/v1/login")
-        log_d(here, "login_url", login_url)
+        # log_d(here, "login_url", login_url)
         res: Response = post(
             url=login_url,
             json={"login": self.usr, "password": self.pwd},
@@ -89,8 +89,9 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         *,
         strict: bool = True,
         should_log: bool = True,
+        prefix: str | None = None,
         **params,
-    ):
+    ) -> Any:
         """
         Execute an HTTP request with retries and validated payload.
 
@@ -102,6 +103,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             route: route path to append to base URL
             body: optional payload (dict or KroniclePayload)
             strict: validate the response as KroniclePayload(s)
+            should_log: log the request
+            prefix: override the class prefix (e.g. "/data/v1")
             params: URL query parameters or other requests kwargs
 
         Raises:
@@ -110,29 +113,16 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             KronicleResponseError: response not JSON or invalid format
             TypeError: body type is invalid
         """
-        here = f"{get_type(self)}.request"
-        url = self._join(route)
-        method_str = self.method_str(method)
-        log_d(here, method_str, url)
-
-        json_body = self._serialize_payload(body)
-        headers = {"Authorization": f"Bearer {self.jwt}"}
-
-        # Build kwargs without mutating user params
-        request_kwargs = params.copy()
-        if json_body is not None:
-            request_kwargs["json"] = json_body
-
-        try:
-            if should_log:
-                log_d(here, "Request", method_str, url)
-            response: Response = method(url=url, headers=headers, **request_kwargs)
-            return self._parse(response=response, strict=strict)
-
-        except Exception as exc:
-            # retriable: network error, timeout, etc.
-            log_e(here, "type(exc)", type(exc))
-            raise
+        params.setdefault("headers", {})["Authorization"] = f"Bearer {self.jwt}"
+        return super()._request(
+            method=method,
+            route=route,
+            body=body,
+            strict=strict,
+            should_log=should_log,
+            prefix=prefix,
+            **params,
+        )
 
     def change_password(self, new_password: str):
         res = self.post(

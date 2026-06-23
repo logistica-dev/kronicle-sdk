@@ -113,4 +113,4 @@ if __name__ == "__main__":  # pragma: no-cover
     except Exception as e:
         log_w(here, "OK, exception caught:", e)
 
-    core_setup.delete_zone(zone_id)
+    core_setup.delete_zone(zone_id=zone_id)

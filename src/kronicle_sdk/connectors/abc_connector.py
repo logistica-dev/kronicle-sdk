@@ -7,7 +7,11 @@ from typing import Any, Callable, Generator
 from requests import Response, delete, get, patch, post, put
 
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
-from kronicle_sdk.models.kronicle_errors import KronicleConnectionError, KronicleHTTPError, KronicleResponseError
+from kronicle_sdk.models.kronicle_errors import (
+    KronicleConnectionError,
+    KronicleHTTPError,
+    KronicleResponseError,
+)
 from kronicle_sdk.utils.log import log_d, log_e, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
 
@@ -41,7 +45,10 @@ class KronicleAbstractConnector(ABC):
     # ----------------------------------------------------------------------------------------------
     @contextlib.contextmanager
     def _attempt(
-        self, func: Callable[[], Any], retries: int | None = None, delay: float | None = None
+        self,
+        func: Callable[[], Any],
+        retries: int | None = None,
+        delay: float | None = None,
     ) -> Generator[Any, None, None]:
         """
         Context manager for retries with delay, returns func() result if successful.
@@ -135,6 +142,9 @@ class KronicleAbstractConnector(ABC):
             TypeError: body type is invalid
         """
         here = f"{get_type(self)}.req"
+        if here.startswith("Kronicle"):
+            here = "K" + here[8:]
+        # log_d(here, "prefix", prefix)
         url = self._join(route, prefix=prefix)
         method_str = self.method_str(method)
         if method_str != "GET":
@@ -146,12 +156,17 @@ class KronicleAbstractConnector(ABC):
         if json_body is not None:
             request_kwargs["json"] = json_body
         request_kwargs.setdefault("timeout", getattr(self, "_timeout", 5))  # default timeout 5s
-
+        # log_d(here, "request_kwargs", **request_kwargs)
         if should_log:
             log_d(here, "Request", method_str, url)
         try:
             response: Response = method(url=url, **request_kwargs)
+
+        except KronicleHTTPError as e:
+            log_e(here, "KronicleHTTPError", f"{e}")
+            raise
         except Exception as e:
+            log_e(here, "type(exc)", type(e).__name__, e)
             log_d(here, "Request failed", method_str, url, "<=", type(e), e)
             raise
         return self._parse(response=response, strict=strict)
@@ -227,13 +242,27 @@ class KronicleAbstractConnector(ABC):
         """Perform a POST request with validation."""
         return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
 
-    def put(self, route: str, body: KroniclePayload | dict, *, prefix: str | None = None, **params) -> Any:
+    def put(
+        self,
+        route: str,
+        body: KroniclePayload | dict,
+        *,
+        prefix: str | None = None,
+        **params,
+    ) -> Any:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
         return self._request(put, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
 
-    def patch(self, route: str, body: KroniclePayload | dict, *, prefix: str | None = None, **params) -> Any:
+    def patch(
+        self,
+        route: str,
+        body: KroniclePayload | dict,
+        *,
+        prefix: str | None = None,
+        **params,
+    ) -> Any:
         """Perform a PATCH request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
@@ -247,9 +276,15 @@ class KronicleAbstractConnector(ABC):
     # Health check
     # ----------------------------------------------------------------------------------------------
     def is_alive(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/live"), timeout=self.timeout), strict=False)
+        res = self._parse(
+            get(url=slash_join(self.url, "/health/live"), timeout=self.timeout),
+            strict=False,
+        )
         return isinstance(res, dict) and res.get("status") == "alive"
 
     def is_ready(self):
-        res = self._parse(get(url=slash_join(self.url, "/health/ready"), timeout=self.timeout), strict=False)
+        res = self._parse(
+            get(url=slash_join(self.url, "/health/ready"), timeout=self.timeout),
+            strict=False,
+        )
         return isinstance(res, dict) and res.get("status") == "ready"

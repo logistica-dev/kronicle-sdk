@@ -2,6 +2,8 @@
 from configparser import ConfigParser
 from unittest.mock import patch
 
+import os
+
 import pytest
 
 from kronicle_sdk.conf.env_keys import (
@@ -113,6 +115,10 @@ class TestSettings:
 
     def test_get_setting_priority_env_over_conf(self, monkeypatch):
         monkeypatch.setenv(KRONICLE_HOST, "envhost")
+        if KRONICLE_USR_NAME not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+        if KRONICLE_USR_PASS not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
         conf_parser["kronicle"] = {"host": "filehost"}
@@ -121,7 +127,11 @@ class TestSettings:
         val = s.get_setting(env=KRONICLE_HOST, param="host")
         assert val == "envhost"
 
-    def test_get_setting_fallback_to_conf(self):
+    def test_get_setting_fallback_to_conf(self, monkeypatch):
+        if KRONICLE_USR_NAME not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+        if KRONICLE_USR_PASS not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
         conf_parser["kronicle"] = {"host": "filehost"}
@@ -130,7 +140,11 @@ class TestSettings:
         val = s.get_setting(env="NON_EXISTENT_ENV", param="host")
         assert val == "filehost"
 
-    def test_get_setting_returns_none_when_missing(self):
+    def test_get_setting_returns_none_when_missing(self, monkeypatch):
+        if KRONICLE_USR_NAME not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+        if KRONICLE_USR_PASS not in os.environ:
+            monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
         conf_parser["kronicle"] = {}
