@@ -173,6 +173,12 @@ def decode_b64url(b64_str: str) -> str:
         raise ValueError("Input string is not properly encoded in base64url") from e
 
 
+def param_dict_to_str(params: dict | None = None) -> str:
+    if not params:
+        return ""
+    return "?" + ("&".join([f"{k}={v}" for k, v in params.items()]))
+
+
 if __name__ == "__main__":  # pragma: no-cover
     here = "str_utils"
     print(here, "strip_quotes 'toto':", strip_quotes("'toto'"))

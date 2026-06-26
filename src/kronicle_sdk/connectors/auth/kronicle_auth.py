@@ -2,6 +2,8 @@
 from json import loads
 from typing import Any, Callable
 
+from requests import Response, post
+
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
 from kronicle_sdk.models.iso_datetime import IsoDateTime
@@ -10,7 +12,6 @@ from kronicle_sdk.models.kronicle_errors import (
 )
 from kronicle_sdk.utils.log import log_d, log_e
 from kronicle_sdk.utils.str_utils import decode_b64url, slash_join
-from requests import Response, post
 
 
 class KronicleUsrLogin(KronicleAbstractConnector):
@@ -58,7 +59,7 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             log_d("get_jwt", f"logged in as '{self.usr}' on", self.url)
             return self._jwt
         else:
-            raise KronicleResponseError("Not field 'access_token' fond in server response")
+            raise KronicleResponseError("No field 'access_token' found in server response")
 
     @property
     def auth_headers(self) -> dict:
@@ -90,7 +91,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         strict: bool = True,
         should_log: bool = True,
         prefix: str | None = None,
-        **params,
+        params: dict | None = None,
+        **kwargs,
     ) -> Any:
         """
         Execute an HTTP request with retries and validated payload.
@@ -105,7 +107,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             strict: validate the response as KroniclePayload(s)
             should_log: log the request
             prefix: override the class prefix (e.g. "/data/v1")
-            params: URL query parameters or other requests kwargs
+            params: URL query parameters
+            kwargs: additional requests keyword arguments
 
         Raises:
             KronicleConnectionError: all retries exhausted
@@ -113,7 +116,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             KronicleResponseError: response not JSON or invalid format
             TypeError: body type is invalid
         """
-        params.setdefault("headers", {})["Authorization"] = f"Bearer {self.jwt}"
+        headers = kwargs.setdefault("headers", {})
+        headers["Authorization"] = f"Bearer {self.jwt}"
         return super()._request(
             method=method,
             route=route,
@@ -121,7 +125,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
             strict=strict,
             should_log=should_log,
             prefix=prefix,
-            **params,
+            params=params,
+            **kwargs,
         )
 
     def change_password(self, new_password: str):

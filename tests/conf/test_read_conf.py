@@ -1,8 +1,7 @@
 # tests/test_read_conf.py
+import os
 from configparser import ConfigParser
 from unittest.mock import patch
-
-import os
 
 import pytest
 

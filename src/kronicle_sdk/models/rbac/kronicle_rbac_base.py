@@ -4,8 +4,9 @@ import re
 from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
-from kronicle_sdk.utils.str_utils import ensure_uuid4, uuid_to_str
 from pydantic import BaseModel, Field, field_validator
+
+from kronicle_sdk.utils.str_utils import ensure_uuid4, uuid_to_str
 
 
 class KronicleRbacBase(BaseModel):

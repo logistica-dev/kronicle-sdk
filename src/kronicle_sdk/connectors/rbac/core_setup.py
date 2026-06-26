@@ -29,13 +29,13 @@ class KronicleCore(KronicleUsrLogin):
         res = self.post(route="/zones", body=zone.to_json())
         return KronicleZone(**res)
 
-    def patch_zone(self, *, zone_id: UUID, name: str | None = None, details: dict | None = None) -> KronicleZone:
+    def patch_zone(self, zone: KronicleZone) -> KronicleZone:
         body = {}
-        if name is not None:
-            body["name"] = name
-        if details is not None:
-            body["details"] = details
-        res = self.patch(route=f"/zones/{zone_id}", body=body)
+        if zone.name is not None:
+            body["name"] = zone.name
+        if zone.details is not None:
+            body["details"] = zone.details
+        res = self.patch(route=f"/zones/{zone.id}", body=body)
         return KronicleZone(**res)
 
     def delete_zone(self, *, zone_id: UUID) -> KronicleZone | None:

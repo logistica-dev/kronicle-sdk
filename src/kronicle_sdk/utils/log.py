@@ -38,6 +38,10 @@ def log_w(*args, **kwargs):  # pragma: no cover
     log("W", *args)
 
 
+def log_i(*args, **kwargs):  # pragma: no cover
+    log("I", *args)
+
+
 def log_d(*args, **kwargs):  # pragma: no cover
     log("D", *args, **kwargs)
 

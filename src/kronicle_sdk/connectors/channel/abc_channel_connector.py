@@ -4,12 +4,13 @@ from typing import Any, Callable, Literal
 from urllib.parse import quote
 from uuid import UUID
 
+from requests import Response, delete, get, patch, post, put
+
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
-from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -64,7 +65,8 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         *,
         strict: bool = True,
         should_log: bool = False,
-        **params,
+        params: dict | None = None,
+        **kwargs,
     ) -> KroniclePayload | list[KroniclePayload]:
         return super()._request(
             method=method,
@@ -72,7 +74,8 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             body=body,
             strict=strict,
             should_log=should_log,
-            **params,
+            params=params,
+            **kwargs,
         )
 
     def _invalidate_cache(self):
@@ -93,18 +96,20 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     # HTTP verbs
     # ----------------------------------------------------------------------------------------------
 
-    def get(self, route: str | None = None, **params) -> KroniclePayload | list[KroniclePayload]:
+    def get(
+        self, route: str | None = None, *, params: dict | None = None, **kwargs
+    ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a GET request and return validated payload(s)."""
-        return self._request(get, route=route, **params)
+        return self._request(get, route=route, params=params, **kwargs)
 
     def post(
         self,
         route: str | None = None,
         body: KroniclePayload | dict | None = None,
-        **params,
+        **kwargs,
     ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a POST request with validation."""
-        return self._request(post, route=route, body=body, **params)
+        return self._request(post, route=route, body=body, **kwargs)
 
     def put(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""

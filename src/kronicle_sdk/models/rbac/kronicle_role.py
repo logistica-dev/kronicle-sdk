@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
+from kronicle_sdk.models.rbac.permission_sets import PermStr
 
 
 class KronicleRole(KronicleRbacBase):
     description: str | None = None
-    permissions: list[str] | None = None
-    restrictions: list[str] | None = None
+    permissions: list[str] | list[PermStr] | None = None
+    restrictions: list[str] | list[PermStr] | None = None
+
+    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+
+        if self.restrictions is not None:
+            d.pop("restrictions")
+        return d
 
 
 if __name__ == "__main__":  # pragma: no-cover

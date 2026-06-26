@@ -13,7 +13,7 @@ from kronicle_sdk.models.kronicle_errors import (
     KronicleResponseError,
 )
 from kronicle_sdk.utils.log import log_d, log_e, log_w
-from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, slash_join
+from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, param_dict_to_str, slash_join
 
 
 class KronicleAbstractConnector(ABC):
@@ -84,8 +84,9 @@ class KronicleAbstractConnector(ABC):
         *,
         url: str | None = None,
         method: str | None = None,
-        should_log=False,
-        **params,
+        should_log: bool = False,
+        params: dict | None = None,
+        **kwargs,
     ) -> Any:
         """
         Parse a requests.Response object into validated KroniclePayload(s).
@@ -100,8 +101,8 @@ class KronicleAbstractConnector(ABC):
         res_content = response.json() if hasattr(response, "json") else response.content
         if not response.ok:
             if should_log:
-                log_e(here, "Request failed", method, url, "<=", res_content)
-            raise KronicleHTTPError.from_response(response, url=url, method=method)
+                log_e(here, "Request failed", method, url, params or {}, "<=", res_content)
+            raise KronicleHTTPError.from_response(response, url=url, method=method, params=params)
         if should_log:
             log_d(here, "Response received", res_content)
         try:
@@ -119,7 +120,8 @@ class KronicleAbstractConnector(ABC):
         strict: bool = True,
         should_log: bool = False,
         prefix: str | None = None,
-        **params,
+        params: dict | None = None,
+        **kwargs,
     ) -> Any:
         """
         Execute an HTTP request with retries and validated payload.
@@ -133,7 +135,8 @@ class KronicleAbstractConnector(ABC):
             body: optional payload (dict or KroniclePayload)
             strict: validate the response as KroniclePayload(s)
             prefix: override the class prefix (e.g. "/data/v1")
-            params: URL query parameters or other requests kwargs
+            params: URL query parameters
+            kwargs: additional requests keyword arguments (timeout, headers, etc.)
 
         Raises:
             KronicleConnectionError: all retries exhausted
@@ -151,14 +154,15 @@ class KronicleAbstractConnector(ABC):
             self._invalidate_cache()
 
         json_body = self._serialize_payload(body)
-        # Build kwargs without mutating user params
-        request_kwargs = params.copy()
+        request_kwargs = kwargs.copy()
+        if params:
+            request_kwargs["params"] = params
         if json_body is not None:
             request_kwargs["json"] = json_body
         request_kwargs.setdefault("timeout", getattr(self, "_timeout", 5))  # default timeout 5s
         # log_d(here, "request_kwargs", **request_kwargs)
         if should_log:
-            log_d(here, "Request", method_str, url)
+            log_d(here, "Request", method_str, url + param_dict_to_str(params))
         try:
             response: Response = method(url=url, **request_kwargs)
 
@@ -227,9 +231,23 @@ class KronicleAbstractConnector(ABC):
     # HTTP verbs
     # ----------------------------------------------------------------------------------------------
 
-    def get(self, route: str | None = None, *, prefix: str | None = None, **params) -> Any:
+    def get(
+        self,
+        route: str | None = None,
+        *,
+        prefix: str | None = None,
+        params: dict | None = None,
+        **kwargs,
+    ) -> Any:
         """Perform a GET request and return validated payload(s)."""
-        return self._request(get, route=route, prefix=prefix, timeout=self.timeout, **params)
+        return self._request(
+            get,
+            route=route,
+            prefix=prefix,
+            timeout=self.timeout,
+            params=params,
+            **kwargs,
+        )
 
     def post(
         self,
@@ -237,10 +255,10 @@ class KronicleAbstractConnector(ABC):
         body: KroniclePayload | dict | None = None,
         *,
         prefix: str | None = None,
-        **params,
+        **kwargs,
     ) -> Any:
         """Perform a POST request with validation."""
-        return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
+        return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, **kwargs)
 
     def put(
         self,
@@ -248,12 +266,12 @@ class KronicleAbstractConnector(ABC):
         body: KroniclePayload | dict,
         *,
         prefix: str | None = None,
-        **params,
+        **kwargs,
     ) -> Any:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(put, route=route, body=body, prefix=prefix, timeout=self.timeout, **params)
+        return self._request(put, route=route, body=body, prefix=prefix, timeout=self.timeout, **kwargs)
 
     def patch(
         self,
@@ -261,16 +279,30 @@ class KronicleAbstractConnector(ABC):
         body: KroniclePayload | dict,
         *,
         prefix: str | None = None,
-        **params,
+        **kwargs,
     ) -> Any:
         """Perform a PATCH request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(patch, route=route, prefix=prefix, timeout=self.timeout, body=body, **params)
+        return self._request(patch, route=route, prefix=prefix, timeout=self.timeout, body=body, **kwargs)
 
-    def delete(self, route: str, *, prefix: str | None = None, **params) -> Any:
+    def delete(
+        self,
+        route: str,
+        *,
+        prefix: str | None = None,
+        params: dict | None = None,
+        **kwargs,
+    ) -> Any:
         """Perform a DELETE request and return validated payload(s)."""
-        return self._request(delete, route=route, prefix=prefix, timeout=self.timeout, **params)
+        return self._request(
+            delete,
+            route=route,
+            prefix=prefix,
+            timeout=self.timeout,
+            params=params,
+            **kwargs,
+        )
 
     # ----------------------------------------------------------------------------------------------
     # Health check

@@ -35,6 +35,7 @@ class KronicleHTTPErrorModel(BaseModel):
     message: str
     details: Any = None
     method: str | None = None
+    params: dict | None = None
     url: str | None = None
     request_id: str | None = None
 
@@ -50,6 +51,7 @@ class KronicleHTTPError(KronicleError):
         response: Response,
         method: str | None = None,
         url: str | None = None,
+        params: dict | None = None,
     ):
         here = "from_response"
         if response is None:
@@ -60,6 +62,7 @@ class KronicleHTTPError(KronicleError):
                 response,
                 method=response.request.method if response.request else method,
                 url=response.request.url if response.request else url,
+                params=params,
             )
         try:
             res = response.json()
@@ -74,6 +77,7 @@ class KronicleHTTPError(KronicleError):
                             details=res.get("details"),
                             method=res.get("method"),
                             url=res.get("url") or res.get("path"),
+                            params=res.get("params"),
                             request_id=res.get("request_id"),
                         )
                     )
@@ -131,7 +135,13 @@ class KronicleHTTPError(KronicleError):
                 )
 
     @classmethod
-    def from_pydantic_response(cls, response: Response, url: str | None = None, method: str | None = None):
+    def from_pydantic_response(
+        cls,
+        response: Response,
+        url: str | None = None,
+        method: str | None = None,
+        params: dict | None = None,
+    ):
         here = "from_pydantic_response"
         try:
             res_json = response.json()
@@ -141,6 +151,7 @@ class KronicleHTTPError(KronicleError):
                     status=response.status_code or 400,
                     url=response.request.url if response.request else url,
                     method=response.request.method if response.request else method,
+                    params=params,
                     error=res_json.get("error") or "UnprocessableContent",
                     message=res_json.get("message") or "Incorrect payload",
                     details=res_json.get("detail") or res_json.get("details"),
@@ -153,6 +164,7 @@ class KronicleHTTPError(KronicleError):
                     status=response.status_code or 400,
                     url=response.request.url if response.request else url,
                     method=response.request.method if response.request else method,
+                    params=params,
                     error="UnprocessableContent",
                     message="Incorrect payload",
                     details=response.reason,

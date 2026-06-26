@@ -4,9 +4,10 @@ import re
 from json import dumps
 from typing import ClassVar
 
+from pydantic import field_validator
+
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.utils.dict_utils import skip_nones
-from pydantic import field_validator
 
 _COMMON_PASSWORDS = frozenset(
     {
@@ -120,7 +121,7 @@ class KronicleUser(KronicleRbacBase):
         return skip_nones(d)
 
     def model_dump_json(self, *args, **kwargs) -> str:
-        return dumps(self.model_dump())
+        return dumps(self.model_dump(*args, **kwargs))
 
     def __str__(self) -> str:
         return f"User {self.model_dump_json()}"
