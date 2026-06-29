@@ -8,6 +8,8 @@ Allows users to provide `channel_schema` as either:
     - dict[str, Python type | Optional[type]] (auto-normalized)
 """
 
+from __future__ import annotations
+
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
@@ -36,7 +38,7 @@ class KroniclePayload(BaseModel):
     channel_schema : dict[str, str] | None
         A dictionary mapping column names to type names (str, int, float, ...).
         Validated against a fixed set of allowed type labels.
-    channel_name : str | None
+    name : str | None
         Human-friendly identifier for the channel.
     metadata : dict[str, Any] | None
         Arbitrary metadata attached to the channel.
@@ -59,7 +61,7 @@ class KroniclePayload(BaseModel):
 
     channel_id: UUID | None = None
     channel_schema: dict[str, str] | None = None
-    channel_name: str | None = None
+    name: str | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, str | int | float | bool | list | datetime] | None = None
     rows: list[dict[str, Any]] | None = None
@@ -163,7 +165,7 @@ class KroniclePayload(BaseModel):
     # Constructors
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def from_json(cls, payload: dict):
+    def from_json(cls, payload: dict) -> KroniclePayload:
         """
         Create a KroniclePayload from a Python dict
         (JS-style convenience wrapper around `model_validate`, which you may use instead).
@@ -177,7 +179,7 @@ class KroniclePayload(BaseModel):
         return cls.model_validate(payload)
 
     @classmethod
-    def from_str(cls, payload: str):
+    def from_str(cls, payload: str) -> KroniclePayload:
         """Create a KroniclePayload from a JSON string."""
         return cls.model_validate_json(payload)
 
@@ -240,8 +242,12 @@ if __name__ == "__main__":  # pragma: no-cover
     now2 = now_utc()
     payload_dict = {
         "channel_id": uuid4_str(),
-        "channel_name": "temperature_channel",
-        "channel_schema": {"time": "IsoDateTime", "temperature": "float", "pressure": "optional[float]"},
+        "name": "temperature_channel",
+        "channel_schema": {
+            "time": "IsoDateTime",
+            "temperature": "float",
+            "pressure": "optional[float]",
+        },
         "metadata": {"unit": "C"},
         "tags": {"test": True},
         "rows": [
@@ -278,7 +284,7 @@ if __name__ == "__main__":  # pragma: no-cover
 
     payload_dict = {
         "channel_id": uuid4_str(),
-        "channel_name": "temperature_channel",
+        "name": "temperature_channel",
         "channel_schema": {
             "time": "datetime",
             "temperature": float,  # Python type auto-normalized
@@ -313,12 +319,12 @@ if __name__ == "__main__":  # pragma: no-cover
         log_d(here, "Caught expected validation error:", e)
 
     channel_id = uuid4_str()
-    channel_name = f"demo_channel_{tiny_id()}"
+    name = f"demo_channel_{tiny_id()}"
     now_tag = now_local()
 
     payload = {
         "channel_id": channel_id,
-        "channel_name": channel_name,
+        "name": name,
         "channel_schema": {"time": datetime, "temperature": float},
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},

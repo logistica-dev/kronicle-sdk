@@ -91,7 +91,7 @@ if __name__ == "__main__":  # pragma: no-cover
 
     payload = {
         "channel_id": channel_id,
-        "channel_name": channel_name,
+        "name": channel_name,
         "channel_schema": {"time": "datetime", "temperature": "float"},
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},

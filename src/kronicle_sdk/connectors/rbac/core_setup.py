@@ -48,8 +48,9 @@ class KronicleCore(KronicleUsrLogin):
 
     def get_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
         if zone_id:
-            return self.get(route=f"/zones/{zone_id}/channels")
-        return self.get(route="/channels")
+            channels = self.get(route=f"/zones/{zone_id}/channels")
+        channels = self.get(route="/channels")
+        return channels
 
     def get_core_channel(self, *, channel_id: UUID) -> dict | None:
         res = self.get(route=f"/channels/{channel_id}")

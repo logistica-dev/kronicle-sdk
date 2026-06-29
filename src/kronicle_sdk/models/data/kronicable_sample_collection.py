@@ -142,7 +142,7 @@ if __name__ == "__main__":  # pragma: no-cover
     # -------------------------------
     base_payload = KroniclePayload(
         channel_id=uuid4(),
-        channel_name="transfer_channel",
+        name="transfer_channel",
         metadata={"unit": "bytes"},
     )
 

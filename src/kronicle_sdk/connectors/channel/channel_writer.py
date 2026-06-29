@@ -30,6 +30,18 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         payload = self._ensure_body_as_payload(body)
         return self.post(route=f"zones/{zone_id}/channels", body=payload)
 
+    def patch_channel(
+        self,
+        body: KroniclePayload | dict,
+        *,
+        zone_id: UUID | str | None = None,
+    ):
+        """Creates a new channel if it doesn't exist already and insert data rows"""
+        zone_id = ensure_uuid4(zone_id) if zone_id else None
+        payload = self._ensure_body_as_payload(body)
+        channel_id = ensure_uuid4(payload.channel_id)
+        return self.patch(route=f"channels/{channel_id}", body=payload)
+
     def insert_rows_and_update_channel(self, body: KroniclePayload | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         payload = self._ensure_body_as_payload(body)
@@ -75,7 +87,7 @@ if __name__ == "__main__":  # pragma: no-cover
 
     payload = {
         "channel_id": channel_id,
-        "channel_name": channel_name,
+        "name": channel_name,
         "channel_schema": {"time": IsoDateTime, "temperature": float},
         "metadata": {"unit": "°C"},
         "tags": {"test": now_tag},

@@ -4,13 +4,12 @@ from typing import Any, Callable, Literal
 from urllib.parse import quote
 from uuid import UUID
 
-from requests import Response, delete, get, patch, post, put
-
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
+from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -111,29 +110,34 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         """Perform a POST request with validation."""
         return self._request(post, route=route, body=body, **kwargs)
 
-    def put(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
+    def put(self, route: str, body: KroniclePayload | dict, **kwargs) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(put, route=route, body=body, **params)
+        return self._request(put, route=route, body=body, **kwargs)
 
-    def patch(self, route: str, body: KroniclePayload | dict, **params) -> KroniclePayload | list[KroniclePayload]:
+    def patch(
+        self,
+        route: str,
+        body: KroniclePayload | dict,
+        **kwargs,
+    ) -> KroniclePayload | list[KroniclePayload]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
-        return self._request(patch, route=route, body=body, **params)
+        return self._request(patch, route=route, body=body, **kwargs)
 
-    def delete(self, route: str, **params) -> KroniclePayload | list[KroniclePayload]:
+    def delete(self, route: str, params: dict | None = None, **kwargs) -> KroniclePayload | list[KroniclePayload]:
         """Perform a DELETE request and return validated payload(s)."""
-        return self._request(delete, route=route, **params)
+        return self._request(delete, route=route, params=params, **kwargs)
 
     # ----------------------------------------------------------------------------------------------
     # Convenience API
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_channels(self, **params) -> list[KroniclePayload]:
+    def get_all_channels(self, params: dict | None = None, **kwargs) -> list[KroniclePayload]:
         """Retrieve all channels as a list of KroniclePayload."""
-        return self._ensure_is_payload_list(self.get(route="channels", **params))
+        return self._ensure_is_payload_list(self.get(route="channels", params=params, **kwargs))
 
     @property
     def all_channels(self) -> list[KroniclePayload]:
