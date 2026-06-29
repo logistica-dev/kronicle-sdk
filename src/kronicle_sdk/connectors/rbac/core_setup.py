@@ -46,7 +46,7 @@ class KronicleCore(KronicleUsrLogin):
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 
-    def get_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
+    def get_all_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
         if zone_id:
             channels = self.get(route=f"/zones/{zone_id}/channels")
         channels = self.get(route="/channels")
@@ -72,6 +72,9 @@ class KronicleCore(KronicleUsrLogin):
         if zone_id is not None:
             body["zone_id"] = str(zone_id)
         return self.patch(route=f"/channels/{channel_id}", body=body)
+
+    def delete_core_channel(self, channel_id: UUID):
+        return self.delete(route=f"/channels/{channel_id}")
 
     # ----------------------------------------------------------------------------------------------
     # Sync
