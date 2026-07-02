@@ -12,7 +12,7 @@ def rbac():
 
 
 class TestKronicleRbacRoles:
-    def test_get_all_roles(self, rbac, monkeypatch):
+    def test_list_roles(self, rbac, monkeypatch):
         fake_roles = [
             {"id": str(uuid4()), "name": "reader", "permissions": ["channel:read"]},
             {"id": str(uuid4()), "name": "writer", "permissions": ["channel:write"]},
@@ -22,7 +22,7 @@ class TestKronicleRbacRoles:
             return fake_roles
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        roles = rbac.get_all_roles()
+        roles = rbac.list_roles()
         assert len(roles) == 2
         assert all(isinstance(r, KronicleRole) for r in roles)
         assert roles[0].name == "reader"

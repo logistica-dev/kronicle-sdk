@@ -99,7 +99,7 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "payload", payload)
     result = kronicle_writer.insert_rows_and_update_channel(payload)
     log_d(here, "result", result)
-    # log_d(here, "channels", kronicle_writer.get_all_channels(should_log=True))
+    # log_d(here, "channels", kronicle_writer.list_nnels(should_log=True))
     # log_d(
     #     here,
     #     "channels",

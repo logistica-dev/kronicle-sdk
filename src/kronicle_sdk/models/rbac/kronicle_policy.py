@@ -6,7 +6,7 @@ from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 
 
-class KronicleZonePolicy(KronicleRbacBase):
+class KroniclePolicy(KronicleRbacBase):
     access_profile_id: UUID
     subject_id: UUID
     is_delegation: bool = False
@@ -14,17 +14,13 @@ class KronicleZonePolicy(KronicleRbacBase):
     delegation_end: IsoDateTime | None = None
 
 
-class KronicleChannelPolicy(KronicleRbacBase):
-    access_profile_id: UUID
-    subject_id: UUID
-    is_delegation: bool = False
-    delegation_start: IsoDateTime | None = None
-    delegation_end: IsoDateTime | None = None
+class KronicleZonePolicy(KroniclePolicy):
+    pass
 
 
-class KronicleRowPolicy(KronicleRbacBase):
-    access_profile_id: UUID
-    subject_id: UUID
-    is_delegation: bool = False
-    delegation_start: IsoDateTime | None = None
-    delegation_end: IsoDateTime | None = None
+class KronicleChannelPolicy(KroniclePolicy):
+    pass
+
+
+class KronicleRowPolicy(KroniclePolicy):
+    pass

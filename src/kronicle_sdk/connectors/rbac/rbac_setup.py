@@ -2,19 +2,23 @@
 from typing import Any
 from uuid import UUID
 
-from requests import put
-
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.rbac.kronicle_access_profile import (
+    KronicleAccessProfile,
     KronicleChannelAccess,
     KronicleRowAccessProfile,
     KronicleZoneAccess,
 )
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
-from kronicle_sdk.models.rbac.kronicle_policy import KronicleChannelPolicy, KronicleRowPolicy, KronicleZonePolicy
+from kronicle_sdk.models.rbac.kronicle_policy import (
+    KronicleChannelPolicy,
+    KronicleRowPolicy,
+    KronicleZonePolicy,
+)
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
+from requests import put
 
 
 class KronicleRbac(KronicleUsrLogin):
@@ -29,7 +33,7 @@ class KronicleRbac(KronicleUsrLogin):
     # Users
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_users(self, *, include_inactive: bool = False) -> list[KronicleUser]:
+    def list_users(self, *, include_inactive: bool = False) -> list[KronicleUser]:
         res = self.get(route="/users?include_inactive=1" if include_inactive else "/users")
         return [KronicleUser(**usr) for usr in res]
 
@@ -69,7 +73,7 @@ class KronicleRbac(KronicleUsrLogin):
     # Groups
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_groups(self) -> list[KronicleGroup]:
+    def list_groups(self) -> list[KronicleGroup]:
         res = self.get(route="/groups")
         return [KronicleGroup(**r) for r in res]
 
@@ -89,7 +93,7 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.patch(route=f"/groups/{group.id}", body=group.model_dump())
         return KronicleGroup(**res)
 
-    def delete_group(self, *, group_id: UUID, force: bool = False) -> KronicleGroup:
+    def delete_group(self, *, group_id: UUID, force: bool | None = False) -> KronicleGroup:
         res = self.delete(route=f"/groups/{group_id}?force=true" if force else f"/groups/{group_id}")
         return KronicleGroup(**res)
 
@@ -107,7 +111,7 @@ class KronicleRbac(KronicleUsrLogin):
     # Roles
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_roles(self) -> list[KronicleRole]:
+    def list_roles(self) -> list[KronicleRole]:
         roles = self.get(route="/roles")
         return [KronicleRole(**r) for r in roles]
 
@@ -187,6 +191,17 @@ class KronicleRbac(KronicleUsrLogin):
         return self.get(route=f"/users/{user_id}/groups/{group_id}", params=params)
 
     # ----------------------------------------------------------------------------------------------
+    # Access Profiles (preemptive scoped roles)
+    # ----------------------------------------------------------------------------------------------
+
+    def list_access_profiles(self) -> dict[str, KronicleAccessProfile]:
+        res = self.get(route="/access-profiles")
+        profiles = {}
+        for k, v in res.items():
+            profiles[k] = [KronicleAccessProfile.from_json(d) for d in v]
+        return profiles
+
+    # ----------------------------------------------------------------------------------------------
     # Zone Access Profiles (preemptive scoped roles)
     # ----------------------------------------------------------------------------------------------
 
@@ -245,6 +260,23 @@ class KronicleRbac(KronicleUsrLogin):
     def delete_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccessProfile:
         res = self.delete(route=f"/access-profiles/rows/{profile_id}")
         return KronicleRowAccessProfile(**res)
+
+    # ----------------------------------------------------------------------------------------------
+    # Policies
+    # ----------------------------------------------------------------------------------------------
+
+    def list_policies(
+        self,
+    ) -> dict[str, list[KronicleZonePolicy | KronicleChannelPolicy | KronicleRowPolicy]]:
+        res = self.get(route="/policies")
+        return {
+            resource: [cls(**p) for p in res.get(resource, [])]
+            for resource, cls in (
+                ("zone", KronicleZonePolicy),
+                ("channel", KronicleChannelPolicy),
+                ("row", KronicleRowPolicy),
+            )
+        }
 
     # ----------------------------------------------------------------------------------------------
     # Zone Policies

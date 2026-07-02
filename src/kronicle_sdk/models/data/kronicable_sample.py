@@ -44,7 +44,7 @@ class KronicableSample(BaseModel):
     # Methods to generate KroniclePayload
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def get_all_fields(cls):
+    def list_fields(cls):
         return {**cls.model_fields, **cls.model_computed_fields}
 
     @classmethod
@@ -53,7 +53,7 @@ class KronicableSample(BaseModel):
 
         # Regular fields:  declared_type = field.annotation
         # Computed fields: declared_type = field.return_type
-        for name, field in cls.get_all_fields().items():
+        for name, field in cls.list_fields().items():
             declared_type = field.annotation if hasattr(field, "annotation") else field.return_type
             kt = KronicableTypeChecker(declared_type)
             schema[name] = kt.to_kronicle_type()
@@ -92,7 +92,7 @@ class KronicableSample(BaseModel):
         """
         row: dict[str, Any] = {}
 
-        for name, field in self.get_all_fields().items():
+        for name, field in self.list_fields().items():
             value = getattr(self, name)
             field_type = field.annotation if hasattr(field, "annotation") else field.return_type
             kt = KronicableTypeChecker(field_type)

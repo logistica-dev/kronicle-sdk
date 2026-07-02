@@ -17,7 +17,7 @@ class KronicleCore(KronicleUsrLogin):
     # Zones
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_zones(self) -> list[KronicleZone]:
+    def list_zones(self) -> list[KronicleZone]:
         zones = self.get(route="/zones")
         return [KronicleZone(**z) for z in zones]
 
@@ -46,7 +46,7 @@ class KronicleCore(KronicleUsrLogin):
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
+    def list_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
         if zone_id:
             channels = self.get(route=f"/zones/{zone_id}/channels")
         channels = self.get(route="/channels")

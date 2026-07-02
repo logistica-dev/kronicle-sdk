@@ -4,12 +4,13 @@ from typing import Any, Callable, Literal
 from urllib.parse import quote
 from uuid import UUID
 
+from requests import Response, delete, get, patch, post, put
+
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
-from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -135,7 +136,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     # Convenience API
     # ----------------------------------------------------------------------------------------------
 
-    def get_all_channels(self, params: dict | None = None, **kwargs) -> list[KroniclePayload]:
+    def list_channels(self, params: dict | None = None, **kwargs) -> list[KroniclePayload]:
         """Retrieve all channels as a list of KroniclePayload."""
         return self._ensure_is_payload_list(self.get(route="channels", params=params, **kwargs))
 
@@ -143,7 +144,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     def all_channels(self) -> list[KroniclePayload]:
         """Return all channels."""
         if not hasattr(self, "_metadata_cache") or self._metadata_cache is None:
-            self._metadata_cache = self.get_all_channels()
+            self._metadata_cache = self.list_channels()
         return self._metadata_cache
 
     @property

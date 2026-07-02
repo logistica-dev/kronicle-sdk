@@ -9,6 +9,14 @@ class KronicleAccessProfile(KronicleRbacBase):
     role_id: UUID
     description: str | None = None
 
+    @classmethod
+    def from_json(d: dict) -> KronicleAccessProfile:
+        if d.get("zone_id"):
+            return KronicleZoneAccess(**d)
+        if d.get("channel_id"):
+            return KronicleChannelAccess(**d)
+        return KronicleRowAccessProfile(**d)
+
 
 class KronicleZoneAccess(KronicleAccessProfile):
     zone_id: UUID
