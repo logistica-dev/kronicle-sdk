@@ -37,10 +37,10 @@ class KronicleRbacBase(BaseModel):
 
     def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
         d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-
-        if self.id is not None:
-            d["id"] = uuid_to_str(self.id)
-        return d
+        return {k: uuid_to_str(v) if isinstance(v, UUID) else v for k, v in d.items()}
+        # if self.id is not None:
+        #     d["id"] = uuid_to_str(self.id)
+        # return d
 
     def to_json(self) -> dict:
         return self.model_dump()
