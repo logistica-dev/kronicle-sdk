@@ -7,12 +7,12 @@ from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
 from kronicle_sdk.models.rbac.kronicle_access_profile import (
     KronicleAccessProfile,
     KronicleChannelAccess,
-    KronicleRowAccessProfile,
     KronicleZoneAccess,
 )
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_policy import (
     KronicleChannelPolicy,
+    KronicleRowAccess,
     KronicleRowPolicy,
     KronicleZonePolicy,
 )
@@ -39,19 +39,19 @@ class KronicleRbac(KronicleUsrLogin):
 
     def get_user_by_id(self, *, user_id: UUID) -> KronicleUser:
         res = self.get(route=f"/users/{user_id}")
-        return KronicleUser(**res)
+        return KronicleUser(**res) if res else None
 
     def get_user_by_email(self, *, email: str) -> KronicleUser:
         res = self.get(route=f"/users?email={email}")
-        return KronicleUser(**res)
+        return KronicleUser(**res) if res else None
 
     def get_user_by_name(self, *, name: str) -> KronicleUser:
         res = self.get(route=f"/users?name={name}")
-        return KronicleUser(**res)
+        return KronicleUser(**res) if res else None
 
     def get_user_by_orcid(self, *, orcid: str) -> KronicleUser:
         res = self.get(route=f"/users?orcid={orcid}")
-        return KronicleUser(**res)
+        return KronicleUser(**res) if res else None
 
     def create_user(self, user: KronicleUser) -> KronicleUser:
         res = self.post(route="/users", body=user.model_dump())
@@ -245,21 +245,21 @@ class KronicleRbac(KronicleUsrLogin):
     # Row Access Profiles
     # ----------------------------------------------------------------------------------------------
 
-    def create_row_access_profile(self, access_profile: KronicleRowAccessProfile) -> KronicleRowAccessProfile:
+    def create_row_access_profile(self, access_profile: KronicleRowAccess) -> KronicleRowAccess:
         res = self.post(route="/access-profiles/rows", body=access_profile.model_dump())
-        return KronicleRowAccessProfile(**res)
+        return KronicleRowAccess(**res)
 
-    def list_row_access_profiles(self) -> list[KronicleRowAccessProfile]:
+    def list_row_access_profiles(self) -> list[KronicleRowAccess]:
         res = self.get(route="/access-profiles/rows")
-        return [KronicleRowAccessProfile(**r) for r in res] if res else []
+        return [KronicleRowAccess(**r) for r in res] if res else []
 
-    def get_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccessProfile:
+    def get_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
         res = self.get(route=f"/access-profiles/rows/{profile_id}")
-        return KronicleRowAccessProfile(**res)
+        return KronicleRowAccess(**res)
 
-    def delete_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccessProfile:
+    def delete_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
         res = self.delete(route=f"/access-profiles/rows/{profile_id}")
-        return KronicleRowAccessProfile(**res)
+        return KronicleRowAccess(**res)
 
     # ----------------------------------------------------------------------------------------------
     # Policies
