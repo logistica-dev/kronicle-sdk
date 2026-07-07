@@ -4,9 +4,10 @@ import re
 from json import dumps
 from typing import ClassVar
 
+from pydantic import field_validator
+
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.utils.dict_utils import skip_nones
-from pydantic import field_validator
 
 _COMMON_PASSWORDS = frozenset(
     {
@@ -74,7 +75,7 @@ def _validate_password(password: str | None) -> str | None:  # noqa: C901
 class KronicleUser(KronicleRbacBase):
     _name_regex: ClassVar[str] = r"[A-Za-z][A-Za-z0-9_ .@-]{3,63}"
 
-    name: str
+    name: str | None = None
     email: str
     password: str | None = None
     orcid: str | None = None

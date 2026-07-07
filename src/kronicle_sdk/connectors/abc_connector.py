@@ -6,14 +6,19 @@ from typing import Any, Callable, Generator
 
 from requests import Response, delete, get, patch, post, put
 
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.kronicle_errors import (
     KronicleConnectionError,
     KronicleHTTPError,
     KronicleResponseError,
 )
 from kronicle_sdk.utils.log import log_d, log_e, log_w
-from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, param_dict_to_str, slash_join
+from kronicle_sdk.utils.str_utils import (
+    check_is_uuid4,
+    get_type,
+    param_dict_to_str,
+    slash_join,
+)
 
 
 class KronicleAbstractConnector(ABC):
@@ -89,7 +94,7 @@ class KronicleAbstractConnector(ABC):
         **kwargs,
     ) -> Any:
         """
-        Parse a requests.Response object into validated KroniclePayload(s).
+        Parse a requests.Response object into validated KronicleChannel(s).
 
         Raises:
             KronicleResponseError: If the response is invalid or not JSON.
@@ -115,7 +120,7 @@ class KronicleAbstractConnector(ABC):
         self,
         method: Callable,
         route: str | None,
-        body: KroniclePayload | dict | None = None,
+        body: KronicleChannel | dict | None = None,
         *,
         strict: bool = True,
         should_log: bool = False,
@@ -132,8 +137,8 @@ class KronicleAbstractConnector(ABC):
         Args:
             method: requests HTTP method (get, post, put, delete, patch)
             route: route path to append to base URL
-            body: optional payload (dict or KroniclePayload)
-            strict: validate the response as KroniclePayload(s)
+            body: optional payload (dict or KronicleChannel)
+            strict: validate the response as KronicleChannel(s)
             prefix: override the class prefix (e.g. "/data/v1")
             params: URL query parameters
             kwargs: additional requests keyword arguments (timeout, headers, etc.)
@@ -181,7 +186,7 @@ class KronicleAbstractConnector(ABC):
     def _serialize_payload(self, body) -> dict | None:
         if body is None:
             return None
-        if isinstance(body, KroniclePayload):
+        if isinstance(body, KronicleChannel):
             payload = body.model_dump(mode="json", exclude_none=True)
         elif isinstance(body, dict):
             payload = body
@@ -190,40 +195,40 @@ class KronicleAbstractConnector(ABC):
         return payload
 
     @classmethod
-    def _ensure_is_payload(cls, res) -> KroniclePayload:
-        """Ensure the result is a KroniclePayload."""
-        if isinstance(res, KroniclePayload):
+    def _ensure_is_payload(cls, res) -> KronicleChannel:
+        """Ensure the result is a KronicleChannel."""
+        if isinstance(res, KronicleChannel):
             return res
-        raise TypeError(f"KroniclePayload expected, got '{get_type(res)}' for {res}")
+        raise TypeError(f"KronicleChannel expected, got '{get_type(res)}' for {res}")
 
     @classmethod
-    def _ensure_is_payload_or_none(cls, res) -> KroniclePayload | None:
-        """Ensure the result is a KroniclePayload or None."""
+    def _ensure_is_payload_or_none(cls, res) -> KronicleChannel | None:
+        """Ensure the result is a KronicleChannel or None."""
         return None if not res else cls._ensure_is_payload(res)
 
     @classmethod
-    def _ensure_is_payload_list(cls, res) -> list[KroniclePayload]:
-        """Ensure the result is a list of KroniclePayload."""
+    def _ensure_is_payload_list(cls, res) -> list[KronicleChannel]:
+        """Ensure the result is a list of KronicleChannel."""
         if not isinstance(res, list):
             raise TypeError(f"List expected, got '{get_type(res)}' for {res}")
         for res_i in res:
-            if not isinstance(res_i, KroniclePayload):
+            if not isinstance(res_i, KronicleChannel):
                 raise TypeError(
-                    f"Each element of the list should be a KroniclePayload, got '{get_type(res_i)}' for {res_i}"
+                    f"Each element of the list should be a KronicleChannel, got '{get_type(res_i)}' for {res_i}"
                 )
         return res
 
-    def _ensure_body_as_payload(self, body: KroniclePayload | dict) -> KroniclePayload:
-        return body if isinstance(body, KroniclePayload) else KroniclePayload.from_json(body)
+    def _ensure_body_as_payload(self, body: KronicleChannel | dict) -> KronicleChannel:
+        return body if isinstance(body, KronicleChannel) else KronicleChannel.from_json(body)
 
-    def _ensure_payload_id(self, body: KroniclePayload | dict) -> str:
+    def _ensure_payload_id(self, body: KronicleChannel | dict) -> str:
         here = "abc_connector._ensure_payload_id"
         log_d(here, "type(body)", type(body).__name__)
         log_d(here, "body", body)
         payload = self._ensure_body_as_payload(body)
-        log_d(here, "kroniclePayload", payload)
+        log_d(here, "KronicleChannel", payload)
 
-        if not (channel_id := payload.channel_id):
+        if not (channel_id := payload.id):
             raise ValueError("Channel ID missing")
         return check_is_uuid4(channel_id)
 
@@ -252,7 +257,7 @@ class KronicleAbstractConnector(ABC):
     def post(
         self,
         route: str | None = None,
-        body: KroniclePayload | dict | None = None,
+        body: KronicleChannel | dict | None = None,
         *,
         prefix: str | None = None,
         **kwargs,
@@ -263,7 +268,7 @@ class KronicleAbstractConnector(ABC):
     def put(
         self,
         route: str,
-        body: KroniclePayload | dict,
+        body: KronicleChannel | dict,
         *,
         prefix: str | None = None,
         **kwargs,
@@ -276,7 +281,7 @@ class KronicleAbstractConnector(ABC):
     def patch(
         self,
         route: str,
-        body: KroniclePayload | dict,
+        body: KronicleChannel | dict,
         *,
         prefix: str | None = None,
         **kwargs,

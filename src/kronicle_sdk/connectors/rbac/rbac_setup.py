@@ -2,8 +2,10 @@
 from typing import Any
 from uuid import UUID
 
+from requests import put
+
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_access_profile import (
     KronicleAccessProfile,
     KronicleChannelAccess,
@@ -18,7 +20,7 @@ from kronicle_sdk.models.rbac.kronicle_policy import (
 )
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
-from requests import put
+from kronicle_sdk.utils.log import log_d
 
 
 class KronicleRbac(KronicleUsrLogin):
@@ -37,19 +39,19 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/users?include_inactive=1" if include_inactive else "/users")
         return [KronicleUser(**usr) for usr in res]
 
-    def get_user_by_id(self, *, user_id: UUID) -> KronicleUser:
+    def get_user_by_id(self, *, user_id: UUID) -> KronicleUser | None:
         res = self.get(route=f"/users/{user_id}")
         return KronicleUser(**res) if res else None
 
-    def get_user_by_email(self, *, email: str) -> KronicleUser:
+    def get_user_by_email(self, *, email: str) -> KronicleUser | None:
         res = self.get(route=f"/users?email={email}")
         return KronicleUser(**res) if res else None
 
-    def get_user_by_name(self, *, name: str) -> KronicleUser:
+    def get_user_by_name(self, *, name: str) -> KronicleUser | None:
         res = self.get(route=f"/users?name={name}")
         return KronicleUser(**res) if res else None
 
-    def get_user_by_orcid(self, *, orcid: str) -> KronicleUser:
+    def get_user_by_orcid(self, *, orcid: str) -> KronicleUser | None:
         res = self.get(route=f"/users?orcid={orcid}")
         return KronicleUser(**res) if res else None
 
@@ -139,7 +141,7 @@ class KronicleRbac(KronicleUsrLogin):
     def put(
         self,
         route: str,
-        body: KroniclePayload | dict | None = None,
+        body: KronicleChannel | dict | None = None,
         *,
         prefix: str | None = None,
         **kwargs,
@@ -194,59 +196,72 @@ class KronicleRbac(KronicleUsrLogin):
     # Access Profiles (preemptive scoped roles)
     # ----------------------------------------------------------------------------------------------
 
-    def list_access_profiles(self) -> dict[str, KronicleAccessProfile]:
-        res = self.get(route="/access-profiles")
-        profiles = {}
-        for k, v in res.items():
-            profiles[k] = [KronicleAccessProfile.from_json(d) for d in v]
-        return profiles
+    def list_access_profiles(self) -> dict[str, list[KronicleAccessProfile]]:
+        res: dict[str, list[dict]] = self.get(route="/access-profiles")
+        result = {}
+        for resource_str, KronicleAccess in [
+            ("zone", KronicleZoneAccess),
+            ("channel", KronicleChannelAccess),
+            ("row", KronicleRowAccess),
+        ]:
+            access_list = []
+            for v in res.get(resource_str) or []:
+                access_list.append(KronicleAccess.from_json(v))
+            result[resource_str] = access_list
+        return result
 
     # ----------------------------------------------------------------------------------------------
     # Zone Access Profiles (preemptive scoped roles)
     # ----------------------------------------------------------------------------------------------
 
-    def create_zone_access_profile(self, access_profile: KronicleZoneAccess) -> KronicleZoneAccess:
-        res = self.post(route="/access-profiles/zones", body=access_profile.model_dump())
-        return KronicleZoneAccess(**res)
+    def create_zone_access_profile(self, access: KronicleZoneAccess) -> KronicleZoneAccess:
+        res = self.post(
+            route="/access-profiles/zones",
+            body=access.model_dump(),
+        )
+        log_d("create_zone_access_profile", "res", res)
+        return KronicleZoneAccess.from_json(res)
 
     def list_zone_access_profiles(self) -> list[KronicleZoneAccess]:
         res = self.get(route="/access-profiles/zones")
-        return [KronicleZoneAccess(**r) for r in res] if res else []
+        log_d("list_zone_access_profiles", res)
+        return [KronicleZoneAccess.from_json(r) for r in res] if res else []
 
     def get_zone_access_profile(self, *, profile_id: UUID) -> KronicleZoneAccess:
         res = self.get(route=f"/access-profiles/zones/{profile_id}")
-        return KronicleZoneAccess(**res)
+        return KronicleZoneAccess.from_json(res)
 
     def delete_zone_access_profile(self, *, profile_id: UUID) -> KronicleZoneAccess:
         res = self.delete(route=f"/access-profiles/zones/{profile_id}")
-        return KronicleZoneAccess(**res)
+        return KronicleZoneAccess.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Channel Access Profiles (preemptive scoped roles)
     # ----------------------------------------------------------------------------------------------
 
-    def create_channel_access_profile(self, access_profile: KronicleChannelAccess) -> KronicleChannelAccess:
-        res = self.post(route="/access-profiles/channels", body=access_profile.model_dump())
-        return KronicleChannelAccess(**res)
+    def create_channel_access_profile(self, access: KronicleChannelAccess) -> KronicleChannelAccess:
+        res = self.post(route="/access-profiles/channels", body=access.model_dump())
+        return KronicleChannelAccess.from_json(res)
 
     def list_channel_access_profiles(self) -> list[KronicleChannelAccess]:
         res = self.get(route="/access-profiles/channels")
-        return [KronicleChannelAccess(**r) for r in res] if res else []
+        return [KronicleChannelAccess.from_json(r) for r in res] if res else []
 
     def get_channel_access_profile(self, *, profile_id: UUID) -> KronicleChannelAccess:
         res = self.get(route=f"/access-profiles/channels/{profile_id}")
-        return KronicleChannelAccess(**res)
+        return KronicleChannelAccess.from_json(res)
 
     def delete_channel_access_profile(self, *, profile_id: UUID) -> KronicleChannelAccess:
         res = self.delete(route=f"/access-profiles/channels/{profile_id}")
-        return KronicleChannelAccess(**res)
+        return KronicleChannelAccess.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Row Access Profiles
     # ----------------------------------------------------------------------------------------------
 
-    def create_row_access_profile(self, access_profile: KronicleRowAccess) -> KronicleRowAccess:
-        res = self.post(route="/access-profiles/rows", body=access_profile.model_dump())
+    def create_row_access_profile(self, access: KronicleRowAccess) -> KronicleRowAccess:
+        log_d("create_row_access_profile", access)
+        res = self.post(route="/access-profiles/rows", body=access.model_dump())
         return KronicleRowAccess(**res)
 
     def list_row_access_profiles(self) -> list[KronicleRowAccess]:
@@ -283,6 +298,7 @@ class KronicleRbac(KronicleUsrLogin):
     # ----------------------------------------------------------------------------------------------
 
     def create_zone_policy(self, zone_policy: KronicleZonePolicy) -> KronicleZonePolicy:
+        log_d("create_zone_policy", zone_policy)
         res = self.post(route="/policies/zones", body=zone_policy.model_dump())
         return KronicleZonePolicy(**res)
 

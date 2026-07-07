@@ -7,7 +7,7 @@ from uuid import UUID
 from requests import Response, delete, get, patch, post, put
 
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
@@ -34,9 +34,9 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     # Internal helpers
     # ----------------------------------------------------------------------------------------------
 
-    def _parse(self, response: Response, *, strict=True, **params) -> KroniclePayload | list[KroniclePayload]:
+    def _parse(self, response: Response, *, strict=True, **params) -> KronicleChannel | list[KronicleChannel]:
         """
-        Parse a requests.Response object into validated KroniclePayload(s).
+        Parse a requests.Response object into validated KronicleChannel(s).
 
         Raises:
             KronicleResponseError: If the response is invalid or not JSON.
@@ -46,12 +46,12 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             return data
         try:
             if isinstance(data, dict):
-                return KroniclePayload.from_json(data)
+                return KronicleChannel.from_json(data)
             if isinstance(data, list):
-                return [KroniclePayload.from_json(d) for d in data]
+                return [KronicleChannel.from_json(d) for d in data]
         except Exception as exc:
             raise KronicleResponseError(
-                "Unexpected response format. Expected KroniclePayload or list[KroniclePayload], got:"
+                "Unexpected response format. Expected KronicleChannel or list[KronicleChannel], got:"
                 f" {response.content}"
             ) from exc
 
@@ -61,13 +61,13 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         self,
         method: Callable,
         route: str | None = None,
-        body: KroniclePayload | dict | None = None,
+        body: KronicleChannel | dict | None = None,
         *,
         strict: bool = True,
         should_log: bool = False,
         params: dict | None = None,
         **kwargs,
-    ) -> KroniclePayload | list[KroniclePayload]:
+    ) -> KronicleChannel | list[KronicleChannel]:
         return super()._request(
             method=method,
             route=route,
@@ -84,10 +84,10 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     def _serialize_payload(self, body) -> dict | None:
         if body is None:
             return None
-        if isinstance(body, KroniclePayload):
+        if isinstance(body, KronicleChannel):
             payload = body
         elif isinstance(body, dict):
-            payload = KroniclePayload.from_json(body)
+            payload = KronicleChannel.from_json(body)
         else:
             raise TypeError(f"Invalid body type: {get_type(body)}")
         return payload.model_dump(mode="json", exclude_none=True)
@@ -98,20 +98,20 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
 
     def get(
         self, route: str | None = None, *, params: dict | None = None, **kwargs
-    ) -> KroniclePayload | list[KroniclePayload]:
+    ) -> KronicleChannel | list[KronicleChannel]:
         """Perform a GET request and return validated payload(s)."""
         return self._request(get, route=route, params=params, **kwargs)
 
     def post(
         self,
         route: str | None = None,
-        body: KroniclePayload | dict | None = None,
+        body: KronicleChannel | dict | None = None,
         **kwargs,
-    ) -> KroniclePayload | list[KroniclePayload]:
+    ) -> KronicleChannel | list[KronicleChannel]:
         """Perform a POST request with validation."""
         return self._request(post, route=route, body=body, **kwargs)
 
-    def put(self, route: str, body: KroniclePayload | dict, **kwargs) -> KroniclePayload | list[KroniclePayload]:
+    def put(self, route: str, body: KronicleChannel | dict, **kwargs) -> KronicleChannel | list[KronicleChannel]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
@@ -120,15 +120,15 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     def patch(
         self,
         route: str,
-        body: KroniclePayload | dict,
+        body: KronicleChannel | dict,
         **kwargs,
-    ) -> KroniclePayload | list[KroniclePayload]:
+    ) -> KronicleChannel | list[KronicleChannel]:
         """Perform a PUT request with validation."""
         if not body:
             raise ValueError("Please provide a body for this request")
         return self._request(patch, route=route, body=body, **kwargs)
 
-    def delete(self, route: str, params: dict | None = None, **kwargs) -> KroniclePayload | list[KroniclePayload]:
+    def delete(self, route: str, params: dict | None = None, **kwargs) -> KronicleChannel | list[KronicleChannel]:
         """Perform a DELETE request and return validated payload(s)."""
         return self._request(delete, route=route, params=params, **kwargs)
 
@@ -136,12 +136,12 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     # Convenience API
     # ----------------------------------------------------------------------------------------------
 
-    def list_channels(self, params: dict | None = None, **kwargs) -> list[KroniclePayload]:
-        """Retrieve all channels as a list of KroniclePayload."""
+    def list_channels(self, params: dict | None = None, **kwargs) -> list[KronicleChannel]:
+        """Retrieve all channels as a list of KronicleChannel."""
         return self._ensure_is_payload_list(self.get(route="channels", params=params, **kwargs))
 
     @property
-    def all_channels(self) -> list[KroniclePayload]:
+    def all_channels(self) -> list[KronicleChannel]:
         """Return all channels."""
         if not hasattr(self, "_metadata_cache") or self._metadata_cache is None:
             self._metadata_cache = self.list_channels()
@@ -150,9 +150,9 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
     @property
     def all_ids(self) -> list:
         """Return all channel IDs for existing channels."""
-        return [channel.channel_id for channel in self.all_channels]
+        return [channel.id for channel in self.all_channels]
 
-    def get_channel(self, id: UUID | str) -> KroniclePayload | None:
+    def get_channel(self, id: UUID | str) -> KronicleChannel | None:
         """Retrieve a channel by its channel_id."""
         return self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
 
@@ -161,33 +161,33 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         Retrieve the first channel matching a channel_name.
 
         Returns:
-            KroniclePayload if found, else None.
+            KronicleChannel if found, else None.
         """
         return self._ensure_is_payload_or_none(self.get(route=f"channels/?name={channel_name}"))
 
-    def get_channel_with_tags(self, tags: dict[str, str]) -> list[KroniclePayload]:
+    def get_channel_with_tags(self, tags: dict[str, str]) -> list[KronicleChannel]:
         """
         Retrieve the channels matching the input tags.
 
         Returns:
-            list[KroniclePayload]
+            list[KronicleChannel]
         """
         tags_str = ",".join(f"{normalize_column_name(k)}:{v}" for k, v in tags.items())
         log_d("get_channel_with_tags", "tags_str", tags_str)
         return self._ensure_is_payload_list(self.get(route=f"channels/?tags={quote(tags_str)}"))
 
-    def get_channel_with_meta(self, metadata: dict[str, str]) -> list[KroniclePayload]:
+    def get_channel_with_meta(self, metadata: dict[str, str]) -> list[KronicleChannel]:
         """
         Retrieve the channels matching the input metadata.
 
         Returns:
-            list[KroniclePayload]
+            list[KronicleChannel]
         """
         meta_str = ",".join(f"{normalize_column_name(k)}:{v}" for k, v in metadata.items())
         log_d("get_channel_with_meta", "meta_str", meta_str)
         return self._ensure_is_payload_list(self.get(route=f"channels/?metadata={quote(meta_str)}"))
 
-    def get_channel_with_max_rows(self) -> KroniclePayload | None:
+    def get_channel_with_max_rows(self) -> KronicleChannel | None:
         max_channel = max(self.all_channels, key=lambda chan: chan.available_rows or 0)
         return max_channel
 
@@ -221,7 +221,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             return_type: 'dict' returns raw columns, 'str' returns string repr.
         """
         result = self.get(route=f"channels/{check_is_uuid4(id)}/columns")
-        assert isinstance(result, KroniclePayload)
+        assert isinstance(result, KronicleChannel)
 
         match return_type:
             case "str":

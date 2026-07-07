@@ -5,15 +5,14 @@ from kronicle_sdk.models.rbac.permission_sets import PermStr
 
 
 class KronicleRole(KronicleRbacBase):
-    name: str
+    name: str  # type:ignore
     description: str | None = None
     permissions: list[str] | list[PermStr] | None = None
     restrictions: list[str] | list[PermStr] | None = None
 
     def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
         d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-
-        if self.restrictions is not None:
+        if d.get("restrictions"):
             d.pop("restrictions")
         return d
 

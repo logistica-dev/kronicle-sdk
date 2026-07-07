@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from kronicle_sdk.models.data.kronicable_sample import KronicableSample
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import now, now_local
 
 
@@ -15,10 +15,10 @@ class KronicableSampleCollection:
     their rows into a KroniclePayload.
     """
 
-    base_payload: KroniclePayload
+    base_payload: KronicleChannel
     samples: list[KronicableSample]
 
-    def __init__(self, base_payload: KroniclePayload, sample_list: Sequence[KronicableSample] | None = None):
+    def __init__(self, base_payload: KronicleChannel, sample_list: Sequence[KronicableSample] | None = None):
         """
         Initialize the collection with an optional initial list of samples.
 
@@ -89,7 +89,7 @@ class KronicableSampleCollection:
             rows.append(row)
         return rows
 
-    def to_kronicle_payload(self) -> KroniclePayload:
+    def to_kronicle_payload(self) -> KronicleChannel:
         """
         Convert the collection into a single KroniclePayload.
         Each sample becomes a row; the payload uses the merged schema.
@@ -105,7 +105,7 @@ class KronicableSampleCollection:
             # Should never happen
             raise ValueError("No schema was provided")
 
-        payload = KroniclePayload(
+        payload = KronicleChannel(
             **self.base_payload.model_dump(),
         )
         payload.rows = self.rows
@@ -140,11 +140,7 @@ if __name__ == "__main__":  # pragma: no-cover
     # -------------------------------
     # Base payload
     # -------------------------------
-    base_payload = KroniclePayload(
-        channel_id=uuid4(),
-        name="transfer_channel",
-        metadata={"unit": "bytes"},
-    )
+    base_payload = KronicleChannel(id=uuid4(), name="transfer_channel", metadata={"unit": "bytes"})
 
     # -------------------------------
     # Create sample collection

@@ -1,6 +1,6 @@
 # kronicle/models/kronicle_payload.py
 """
-KroniclePayload: central Data Transfer Object for Kronicle SDK.
+KronicleChannel: central Data Transfer Object for Kronicle SDK.
 
 Delegates all type validation/normalization to KronicableTypeChecker.
 Allows users to provide `channel_schema` as either:
@@ -21,10 +21,10 @@ from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeCh
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local, now_utc
 from kronicle_sdk.utils.log import log_d
 
-mod = "KroniclePayload"
+mod = "KronicleChannel"
 
 
-class KroniclePayload(BaseModel):
+class KronicleChannel(BaseModel):
     """
     Data transfer object for any response or request to the Kronicle.
 
@@ -59,7 +59,7 @@ class KroniclePayload(BaseModel):
         Optional details attached to the operation result.
     """
 
-    channel_id: UUID | None = None
+    id: UUID | None = None
     channel_schema: dict[str, str] | None = None
     name: str | None = None
     metadata: dict[str, Any] | None = None
@@ -165,9 +165,9 @@ class KroniclePayload(BaseModel):
     # Constructors
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def from_json(cls, payload: dict) -> KroniclePayload:
+    def from_json(cls, payload: dict) -> KronicleChannel:
         """
-        Create a KroniclePayload from a Python dict
+        Create a KronicleChannel from a Python dict
         (JS-style convenience wrapper around `model_validate`, which you may use instead).
         """
         if schema := payload.get("channel_schema"):
@@ -176,11 +176,14 @@ class KroniclePayload(BaseModel):
                 kt = KronicableTypeChecker(typ)
                 normalized[col] = kt.to_kronicle_type()
             payload["channel_schema"] = normalized
+        if channel_id := payload.get("channel_id"):
+            payload["id"] = channel_id
+            payload.pop("channel_id")
         return cls.model_validate(payload)
 
     @classmethod
-    def from_str(cls, payload: str) -> KroniclePayload:
-        """Create a KroniclePayload from a JSON string."""
+    def from_str(cls, payload: str) -> KronicleChannel:
+        """Create a KronicleChannel from a JSON string."""
         return cls.model_validate_json(payload)
 
     # ----------------------------------------------------------------------------------------------
@@ -225,8 +228,8 @@ class KroniclePayload(BaseModel):
         return self.columns
 
     def ensure_has_id(self) -> UUID:
-        if self.channel_id:
-            return self.channel_id
+        if self.id:
+            return self.id
         raise ValueError("Channel ID missing")
 
     def get_columns(self):
@@ -241,7 +244,7 @@ if __name__ == "__main__":  # pragma: no-cover
     now1 = now_local()
     now2 = now_utc()
     payload_dict = {
-        "channel_id": uuid4_str(),
+        "id": uuid4_str(),
         "name": "temperature_channel",
         "channel_schema": {
             "time": "IsoDateTime",
@@ -264,26 +267,26 @@ if __name__ == "__main__":  # pragma: no-cover
         "op_details": {"issued_at": now_local()},
     }
 
-    log_d(here, "=== Creating KroniclePayload from dict ===")
-    payload = KroniclePayload.from_json(payload_dict)
+    log_d(here, "=== Creating KronicleChannel from dict ===")
+    payload = KronicleChannel.from_json(payload_dict)
     log_d(here, payload)
 
     log_d(here, "=== Serializing back to JSON ===")
     json_str = payload.model_dump_json()
     log_d(here, json_str)
 
-    log_d(here, "=== Creating KroniclePayload from JSON string ===")
-    payload_from_str = KroniclePayload.from_str(json_str)
+    log_d(here, "=== Creating KronicleChannel from JSON string ===")
+    payload_from_str = KronicleChannel.from_str(json_str)
     log_d(here, payload_from_str)
 
     log_d(here, "=== Checking validation ===")
     try:
-        bad_payload = KroniclePayload(channel_schema={"time": "datetime", "temp": "unknown_type"})
+        bad_payload = KronicleChannel(channel_schema={"time": "datetime", "temp": "unknown_type"})
     except ValueError as e:
         log_d(here, "Caught expected validation error:", e)
 
     payload_dict = {
-        "channel_id": uuid4_str(),
+        "id": uuid4_str(),
         "name": "temperature_channel",
         "channel_schema": {
             "time": "datetime",
@@ -300,21 +303,21 @@ if __name__ == "__main__":  # pragma: no-cover
         "op_details": {"issued_at": now_local()},
     }
 
-    log_d(here, "=== Creating KroniclePayload from dict ===")
-    payload = KroniclePayload.from_json(payload_dict)
+    log_d(here, "=== Creating KronicleChannel from dict ===")
+    payload = KronicleChannel.from_json(payload_dict)
     log_d(here, payload)
 
     log_d(here, "=== Serializing back to JSON ===")
     json_str = payload.model_dump_json()
     log_d(here, json_str)
 
-    log_d(here, "=== Creating KroniclePayload from JSON string ===")
-    payload_from_str = KroniclePayload.from_str(json_str)
+    log_d(here, "=== Creating KronicleChannel from JSON string ===")
+    payload_from_str = KronicleChannel.from_str(json_str)
     log_d(here, payload_from_str)
 
     log_d(here, "=== Checking validation ===")
     try:
-        bad_payload = KroniclePayload(channel_schema={"time": "datetime", "temp": "unknown_type"})
+        bad_payload = KronicleChannel(channel_schema={"time": "datetime", "temp": "unknown_type"})
     except ValueError as e:
         log_d(here, "Caught expected validation error:", e)
 
@@ -323,7 +326,7 @@ if __name__ == "__main__":  # pragma: no-cover
     now_tag = now_local()
 
     payload = {
-        "channel_id": channel_id,
+        "id": channel_id,
         "name": name,
         "channel_schema": {"time": datetime, "temperature": float},
         "metadata": {"unit": "°C"},
@@ -334,6 +337,6 @@ if __name__ == "__main__":  # pragma: no-cover
         ],
     }
 
-    log_d(here, "=== Creating KroniclePayload from dict ===")
-    kp = KroniclePayload.from_json(payload=payload)
+    log_d(here, "=== Creating KronicleChannel from dict ===")
+    kp = KronicleChannel.from_json(payload=payload)
     log_d(here, kp)

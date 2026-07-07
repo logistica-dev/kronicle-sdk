@@ -1,6 +1,7 @@
 import re
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime
+from json import dumps
 from random import choices
 from re import compile, sub
 from string import ascii_lowercase, digits
@@ -44,8 +45,30 @@ def uuid4_str() -> str:
     return str(uuid4())
 
 
-def uuid_to_str(u: UUID | None) -> str | None:
-    return u.hex if u else None
+def uuid_to_str(v: Any) -> Any:
+    if isinstance(v, UUID):
+        return v.hex
+    if isinstance(v, dict):
+        return {k: uuid_to_str(v) for k, v in v.items()}
+    return v
+
+
+def serialize(x: Any, *, exclude_none: bool | None = True) -> Any:
+    if isinstance(x, (bool, int, float)):
+        return x
+    if isinstance(x, UUID):
+        return x.hex
+    if exclude_none and not x and isinstance(x, (list, dict, set, str)):
+        return None
+    if isinstance(x, (list, tuple, set)):
+        if (tx := type(x)) is set:
+            tx = list
+        return tx(sv for val in x if not ((sv := serialize(val)) is None and exclude_none))
+    if isinstance(x, dict):
+        return {key: sv for key, val in x.items() if not ((sv := serialize(val)) is None and exclude_none)}
+    if hasattr(x, "model_dump"):
+        return x.model_dump(exclude_none=exclude_none)
+    return x
 
 
 def validate_orcid(v: str) -> str:
@@ -183,3 +206,27 @@ if __name__ == "__main__":  # pragma: no-cover
     here = "str_utils"
     print(here, "strip_quotes 'toto':", strip_quotes("'toto'"))
     print(here, 'strip_quotes "toto":', strip_quotes('"toto"'))
+    ll = [u := uuid4(), {}, [], "", False, True]
+    s = {u, "", False, True, 42, 0, 0.0}
+    t = (u, {}, [], "", False, True, ll)
+    d = {
+        "uuid": u,
+        "dict": {},
+        "list": [],
+        "ll": ll,
+        "set": s,
+        "tuple": t,
+        "str": "",
+        "false": False,
+        "true": True,
+    }
+    print(here, "serialize bool", serialize(False))
+    print(here, "serialize int", serialize(0))
+    print(here, "serialize float", serialize(0.0))
+    print(here, "serialize list", serialize([True, False, 0, 0.0]))
+    print(here, "serialize list", serialize(ll))
+    print(here, "serialize list", serialize(ll, exclude_none=False))
+    print(here, "serialize set", serialize(s))
+    print(here, "serialize tuple", serialize(t))
+    print(here, "serialize dict", serialize(d))
+    print(here, "serialize dict", dumps(serialize(d, exclude_none=False)))

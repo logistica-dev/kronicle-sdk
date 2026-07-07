@@ -29,8 +29,8 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "is_ready", kronicle_reader.is_ready())
     log_d(here, "nb channels", len(kronicle_reader.all_channels))
     max_chan = kronicle_reader.get_channel_with_max_rows()
-    if max_chan and max_chan.channel_id:
-        log_d(here, "channel with max rows", max_chan := kronicle_reader.get_channel(max_chan.channel_id))
+    if max_chan and max_chan.id:
+        log_d(here, "channel with max rows", max_chan := kronicle_reader.get_channel(max_chan.id))
     log_d(here, "get_channel_with_name", kronicle_reader.get_channel_with_name("demo_channel_a71125a5"))
     log_d(
         here,

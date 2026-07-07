@@ -4,7 +4,6 @@ from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 
 
 class KronicleGroup(KronicleRbacBase):
-    name: str
     pass
 
 

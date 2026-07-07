@@ -3,7 +3,7 @@ from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
 from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
 from kronicle_sdk.models.data.kronicable_sample import KronicableSample
 from kronicle_sdk.models.data.kronicable_sample_collection import KronicableSampleCollection
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.kronicle_errors import (
     KronicleConnectionError,
@@ -22,7 +22,7 @@ __all__ = [
     "KronicleWriter",
     "KronicleSetup",
     # Payload
-    "KroniclePayload",
+    "KronicleChannel",
     # Payload helpers
     "KronicableSample",
     "KronicableSampleCollection",

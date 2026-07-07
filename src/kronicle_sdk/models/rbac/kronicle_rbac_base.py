@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Any, ClassVar
+from ast import TypeVar
+from typing import Any, ClassVar, Self
 from uuid import UUID, uuid4
 
+from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
 from pydantic import BaseModel, Field, field_validator
 
-from kronicle_sdk.utils.str_utils import ensure_uuid4, uuid_to_str
+T = TypeVar("T")
 
 
 class KronicleRbacBase(BaseModel):
@@ -37,16 +39,26 @@ class KronicleRbacBase(BaseModel):
 
     def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
         d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        return {k: uuid_to_str(v) if isinstance(v, UUID) else v for k, v in d.items()}
-        # if self.id is not None:
-        #     d["id"] = uuid_to_str(self.id)
-        # return d
+        return serialize(d, exclude_none=exclude_none)
+
+    def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
+        return str(self.model_dump(*args, exclude_none=exclude_none, **kwargs))
 
     def to_json(self) -> dict:
         return self.model_dump()
 
+    @classmethod
+    def from_json(cls, d: dict) -> Self:
+        return cls.model_validate(d, from_attributes=True)
+
     def __str__(self) -> str:
         cls_name = self.__class__.__name__
         if cls_name.startswith("Kronicle"):
-            cls_name = cls_name[8:]
-        return f"{cls_name} {self.model_dump()}"
+            cls_name = "K" + cls_name[8:]
+        return f"{cls_name} {self.model_dump(exclude_none=True)}"
+
+    @classmethod
+    def _extract_field(cls, d: dict, field_name: str, T: type):
+        if not (field := d.get(field_name)):
+            raise ValueError(f"'{field_name}' not found in {d}")
+        return T.from_json(field)

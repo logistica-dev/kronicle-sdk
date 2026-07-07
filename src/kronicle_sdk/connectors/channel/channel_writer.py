@@ -6,7 +6,7 @@ from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.channel.abc_channel_connector import (
     KronicleAbstractChannelConnector,
 )
-from kronicle_sdk.models.data.kronicle_payload import KroniclePayload
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
 from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
@@ -24,7 +24,7 @@ class KronicleWriter(KronicleAbstractChannelConnector):
     def prefix(self) -> str:
         return "/data/v1"
 
-    def create_channel(self, body: KroniclePayload | dict, *, zone_id: UUID | str):
+    def create_channel(self, body: KronicleChannel | dict, *, zone_id: UUID | str):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         zone_id = ensure_uuid4(zone_id)
         payload = self._ensure_body_as_payload(body)
@@ -32,30 +32,30 @@ class KronicleWriter(KronicleAbstractChannelConnector):
 
     def patch_channel(
         self,
-        body: KroniclePayload | dict,
+        body: KronicleChannel | dict,
         *,
         zone_id: UUID | str | None = None,
     ):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         zone_id = ensure_uuid4(zone_id) if zone_id else None
         payload = self._ensure_body_as_payload(body)
-        channel_id = ensure_uuid4(payload.channel_id)
+        channel_id = ensure_uuid4(payload.id)
         return self.patch(route=f"channels/{channel_id}", body=payload)
 
-    def insert_rows_and_update_channel(self, body: KroniclePayload | dict):
+    def insert_rows_and_update_channel(self, body: KronicleChannel | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         payload = self._ensure_body_as_payload(body)
-        channel_id = ensure_uuid4(payload.channel_id)
+        channel_id = ensure_uuid4(payload.id)
         return self.post(route=f"channels/{channel_id}", body=payload)
 
-    # def add_rows(self, body: KroniclePayload | dict):
+    # def add_rows(self, body: KronicleChannel | dict):
     #     """Creates a new channel if it doesn't exist already and insert data rows"""
     #     payload = self._ensure_body_as_payload(body)
     #     return self.insert_rows_and_upsert_channel(body=payload)
 
     def insert_rows(self, id, rows: list[dict[str, Any]]):
         """Insert rows for an existing channel"""
-        payload = KroniclePayload(channel_id=id, rows=rows)
+        payload = KronicleChannel(id=id, rows=rows)
         return self.post(f"channels/{id}/rows", body=payload)
 
 
@@ -67,9 +67,9 @@ if __name__ == "__main__":  # pragma: no-cover
     co = Settings().connection
     log_d(here, "Connecting to", co.url)
     kronicle_writer = KronicleWriter.from_connection_info(co)
-    [log_d(here, f"Channel {channel.channel_id}", channel) for channel in kronicle_writer.all_channels]
+    [log_d(here, f"Channel {channel.id}", channel) for channel in kronicle_writer.all_channels]
     max_chan = kronicle_writer.get_channel_with_max_rows()
-    if max_chan and (max_chan_id := max_chan.channel_id):
+    if max_chan and (max_chan_id := max_chan.id):
         log_d(here, "channel with max rows", kronicle_writer.get_channel(max_chan_id))
         rows = kronicle_writer.get_rows_for_channel(max_chan_id)
         assert isinstance(rows, list)
