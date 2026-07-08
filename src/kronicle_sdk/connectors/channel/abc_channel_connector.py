@@ -163,7 +163,9 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         Returns:
             KronicleChannel if found, else None.
         """
-        return self._ensure_is_payload_or_none(self.get(route=f"channels/?name={channel_name}"))
+        res = self.get(route=f"channels/?name={channel_name}", strict=None)
+        log_d("get_channel_with_name", res)
+        return self._ensure_is_payload_or_none(res)
 
     def get_channel_with_tags(self, tags: dict[str, str]) -> list[KronicleChannel]:
         """

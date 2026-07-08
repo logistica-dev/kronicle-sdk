@@ -19,15 +19,15 @@ class KronicleCore(KronicleUsrLogin):
 
     def list_zones(self) -> list[KronicleZone]:
         zones = self.get(route="/zones")
-        return [KronicleZone(**z) for z in zones]
+        return [KronicleZone.from_json(z) for z in zones]
 
     def get_zone_by_id(self, *, zone_id: UUID) -> KronicleZone | None:
         res = self.get(route=f"/zones/{zone_id}")
-        return KronicleZone(**res) if res else None
+        return KronicleZone.from_json(res) if res else None
 
     def create_zone(self, zone: KronicleZone) -> KronicleZone:
         res = self.post(route="/zones", body=zone.to_json())
-        return KronicleZone(**res)
+        return KronicleZone.from_json(res)
 
     def patch_zone(self, zone: KronicleZone) -> KronicleZone:
         body = {}
@@ -36,11 +36,11 @@ class KronicleCore(KronicleUsrLogin):
         if zone.details is not None:
             body["details"] = zone.details
         res = self.patch(route=f"/zones/{zone.id}", body=body)
-        return KronicleZone(**res)
+        return KronicleZone.from_json(res)
 
     def delete_zone(self, *, zone_id: UUID) -> KronicleZone | None:
         res = self.delete(route=f"/zones/{zone_id}")
-        return KronicleZone(**res) if res else None
+        return KronicleZone.from_json(res) if res else None
 
     # ----------------------------------------------------------------------------------------------
     # Core Channels

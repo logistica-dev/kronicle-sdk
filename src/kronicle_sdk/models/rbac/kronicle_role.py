@@ -5,13 +5,13 @@ from kronicle_sdk.models.rbac.permission_sets import PermStr
 
 
 class KronicleRole(KronicleRbacBase):
-    name: str  # type:ignore
+    name: str  # type: ignore
     description: str | None = None
     permissions: list[str] | list[PermStr] | None = None
     restrictions: list[str] | list[PermStr] | None = None
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         if d.get("restrictions"):
             d.pop("restrictions")
         return d

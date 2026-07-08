@@ -15,16 +15,19 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import field_validator, model_validator
 
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local, now_utc
+from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
+from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d
+from kronicle_sdk.utils.str_utils import uuid_to_str
 
 mod = "KronicleChannel"
 
 
-class KronicleChannel(BaseModel):
+class KronicleChannel(KronicleRbacBase):
     """
     Data transfer object for any response or request to the Kronicle.
 
@@ -33,7 +36,7 @@ class KronicleChannel(BaseModel):
 
     Fields
     ------
-    channel_id : UUID | None
+    id : UUID | None
         Unique identifier of the channel.
     channel_schema : dict[str, str] | None
         A dictionary mapping column names to type names (str, int, float, ...).
@@ -59,9 +62,7 @@ class KronicleChannel(BaseModel):
         Optional details attached to the operation result.
     """
 
-    id: UUID | None = None
     channel_schema: dict[str, str] | None = None
-    name: str | None = None
     metadata: dict[str, Any] | None = None
     tags: dict[str, str | int | float | bool | list | datetime] | None = None
     rows: list[dict[str, Any]] | None = None
@@ -71,6 +72,7 @@ class KronicleChannel(BaseModel):
     op_status: str | None = None
     op_details: dict[str, Any] | None = None
     available_rows: int | None = None
+    zone: KronicleZone | None = None
 
     # ----------------------------------------------------------------------------------------------
     # Validators
@@ -165,21 +167,25 @@ class KronicleChannel(BaseModel):
     # Constructors
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def from_json(cls, payload: dict) -> KronicleChannel:
+    def from_json(cls, d: dict) -> KronicleChannel:
         """
-        Create a KronicleChannel from a Python dict
-        (JS-style convenience wrapper around `model_validate`, which you may use instead).
+        Create a KronicleChannel from a Python dict.
         """
-        if schema := payload.get("channel_schema"):
+        if schema := d.get("channel_schema"):
             normalized = {}
             for col, typ in schema.items():
                 kt = KronicableTypeChecker(typ)
                 normalized[col] = kt.to_kronicle_type()
-            payload["channel_schema"] = normalized
-        if channel_id := payload.get("channel_id"):
-            payload["id"] = channel_id
-            payload.pop("channel_id")
-        return cls.model_validate(payload)
+            d["channel_schema"] = normalized
+
+        if channel_id := d.get("channel_id"):
+            d["id"] = channel_id
+            d.pop("channel_id")
+
+        if zone := d.get("zone"):
+            d["zone"] = KronicleZone.from_json(zone)
+
+        return cls.model_validate(d)
 
     @classmethod
     def from_str(cls, payload: str) -> KronicleChannel:
@@ -190,16 +196,16 @@ class KronicleChannel(BaseModel):
     # Serialization helpers
     # ----------------------------------------------------------------------------------------------
     def to_json(self, **args) -> dict:
-        """Convert to a Python dict"""
-        return super().model_dump(**args)
+        """Convert to a Python dict."""
+        return self.model_dump(**args)
 
     def model_dump(self, **args) -> dict:
-        """Convert to a Python dict"""
-        return super().model_dump(**args)
-
-    def model_dump_json(self, indent: int | None = None, **args) -> str:
-        """Convert to a JSON string"""
-        return super().model_dump_json(indent=indent, **args)
+        d = super().model_dump(**args)
+        if self.zone:
+            d["zone_id"] = uuid_to_str(self.zone.id)
+            d["zone_name"] = self.zone.name
+        d.pop("zone", None)
+        return d
 
     def to_json_str(self, indent: int | None = None, **args) -> str:
         """Convert to a JSON string"""
@@ -338,5 +344,5 @@ if __name__ == "__main__":  # pragma: no-cover
     }
 
     log_d(here, "=== Creating KronicleChannel from dict ===")
-    kp = KronicleChannel.from_json(payload=payload)
+    kp = KronicleChannel.from_json(d=payload)
     log_d(here, kp)

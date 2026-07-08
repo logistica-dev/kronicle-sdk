@@ -1,6 +1,7 @@
 # kronicle_sdk/models/rbac/kronicle_policy.py
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from kronicle_sdk.models.iso_datetime import IsoDateTime
@@ -16,16 +17,17 @@ from kronicle_sdk.utils.str_utils import uuid_to_str
 
 
 class KronicleSubject(KronicleRbacBase):
+    type: Literal["user", "group"]
     user_id: UUID | None = None
     group_id: UUID | None = None
 
     @classmethod
     def from_user(cls, user: KronicleUser):
-        return KronicleSubject(name=user.name, user_id=user.id)
+        return KronicleSubject(name=user.name, user_id=user.id, type="user")
 
     @classmethod
     def from_group(cls, group: KronicleGroup):
-        return KronicleSubject(name=group.name, group_id=group.id)
+        return KronicleSubject(name=group.name, group_id=group.id, type="group")
 
 
 class KroniclePolicy(KronicleRbacBase):
@@ -55,14 +57,8 @@ class KronicleZonePolicy(KroniclePolicy):
     def from_json(cls, d) -> KronicleZonePolicy:
         return KronicleZonePolicy(
             **cls._extract_self(d),
-            access_profile=cls._extract_field(d, "access", KronicleZoneAccess),
+            access_profile=cls._extract_field(d, "access_profile", KronicleZoneAccess),
         )
-
-    def model_dump(self) -> dict:
-        d = super().model_dump()
-        d["zone_id"] = uuid_to_str(self.access_profile.zone.id)
-        d.pop("access_profile")
-        return d
 
 
 class KronicleChannelPolicy(KroniclePolicy):
@@ -72,11 +68,11 @@ class KronicleChannelPolicy(KroniclePolicy):
     def from_json(cls, d) -> KronicleChannelPolicy:
         return KronicleChannelPolicy(
             **cls._extract_self(d),
-            access_profile=cls._extract_field(d, "access", KronicleChannelAccess),
+            access_profile=cls._extract_field(d, "access_profile", KronicleChannelAccess),
         )
 
-    def model_dump(self) -> dict:
-        d = super().model_dump()
+    def flatten(self) -> dict:
+        d = self.model_dump()
         d["id"] = uuid_to_str(self.access_profile.channel.id)
         d.pop("access_profile")
         return d
@@ -85,8 +81,8 @@ class KronicleChannelPolicy(KroniclePolicy):
 class KronicleRowPolicy(KroniclePolicy):
     access_profile: KronicleRowAccess
 
-    def model_dump(self) -> dict:
-        d = super().model_dump()
+    def flatten(self) -> dict:
+        d = self.model_dump()
         d["row_id"] = uuid_to_str(self.access_profile.row_id)
         d.pop("access_profile")
         return d

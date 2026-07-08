@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import re
 from ast import TypeVar
+from json import dumps
 from typing import Any, ClassVar, Self
 from uuid import UUID, uuid4
 
-from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
 from pydantic import BaseModel, Field, field_validator
+
+from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
 
 T = TypeVar("T")
 
@@ -14,7 +16,7 @@ T = TypeVar("T")
 class KronicleRbacBase(BaseModel):
     _name_regex: ClassVar[str] = r"[A-Za-z][A-Za-z0-9_ .-]{3,63}"
 
-    id: UUID = Field(default_factory=uuid4)
+    id: UUID | None = Field(default_factory=uuid4)
     name: str | None = None
     details: dict[str, Any] | None = None
 
@@ -37,12 +39,12 @@ class KronicleRbacBase(BaseModel):
             )
         return v
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         return serialize(d, exclude_none=exclude_none)
 
-    def model_dump_json(self, *args, exclude_none=True, **kwargs) -> str:
-        return str(self.model_dump(*args, exclude_none=exclude_none, **kwargs))
+    def model_dump_json(self, *args, indent: int | None = None, exclude_none=True, **kwargs) -> str:
+        return dumps(self.model_dump(*args, exclude_none=exclude_none, **kwargs), indent=indent)
 
     def to_json(self) -> dict:
         return self.model_dump()
@@ -55,7 +57,7 @@ class KronicleRbacBase(BaseModel):
         cls_name = self.__class__.__name__
         if cls_name.startswith("Kronicle"):
             cls_name = "K" + cls_name[8:]
-        return f"{cls_name} {self.model_dump(exclude_none=True)}"
+        return f"{cls_name} {self.model_dump_json(exclude_none=True)}"
 
     @classmethod
     def _extract_field(cls, d: dict, field_name: str, T: type):

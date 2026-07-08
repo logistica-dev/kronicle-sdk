@@ -37,39 +37,39 @@ class KronicleRbac(KronicleUsrLogin):
 
     def list_users(self, *, include_inactive: bool = False) -> list[KronicleUser]:
         res = self.get(route="/users?include_inactive=1" if include_inactive else "/users")
-        return [KronicleUser(**usr) for usr in res]
+        return [KronicleUser.from_json(usr) for usr in res]
 
     def get_user_by_id(self, *, user_id: UUID) -> KronicleUser | None:
         res = self.get(route=f"/users/{user_id}")
-        return KronicleUser(**res) if res else None
+        return KronicleUser.from_json(res) if res else None
 
     def get_user_by_email(self, *, email: str) -> KronicleUser | None:
         res = self.get(route=f"/users?email={email}")
-        return KronicleUser(**res) if res else None
+        return KronicleUser.from_json(res) if res else None
 
     def get_user_by_name(self, *, name: str) -> KronicleUser | None:
         res = self.get(route=f"/users?name={name}")
-        return KronicleUser(**res) if res else None
+        return KronicleUser.from_json(res) if res else None
 
     def get_user_by_orcid(self, *, orcid: str) -> KronicleUser | None:
         res = self.get(route=f"/users?orcid={orcid}")
-        return KronicleUser(**res) if res else None
+        return KronicleUser.from_json(res) if res else None
 
     def create_user(self, user: KronicleUser) -> KronicleUser:
         res = self.post(route="/users", body=user.model_dump())
-        return KronicleUser(**res)
+        return KronicleUser.from_json(res)
 
     def patch_user(self, user: KronicleUser) -> KronicleUser:
         res = self.patch(route=f"/users/{user.id}", body=user.model_dump())
-        return KronicleUser(**res)
+        return KronicleUser.from_json(res)
 
     def deactivate_user(self, *, user_id: UUID) -> KronicleUser:
         res = self.delete(route=f"/users/{user_id}")
-        return KronicleUser(**res)
+        return KronicleUser.from_json(res)
 
     def delete_user(self, *, user_id: UUID) -> KronicleUser:
         res = self.delete(route=f"/users/{user_id}?remove=true")
-        return KronicleUser(**res)
+        return KronicleUser.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Groups
@@ -77,31 +77,31 @@ class KronicleRbac(KronicleUsrLogin):
 
     def list_groups(self) -> list[KronicleGroup]:
         res = self.get(route="/groups")
-        return [KronicleGroup(**r) for r in res]
+        return [KronicleGroup.from_json(r) for r in res]
 
     def get_group_by_id(self, *, group_id: UUID) -> KronicleGroup:
         res = self.get(route=f"/groups/{group_id}")
-        return KronicleGroup(**res)
+        return KronicleGroup.from_json(res)
 
     def get_group_by_name(self, *, name: str) -> KronicleGroup:
         res = self.get(route=f"/groups?name={name}")
-        return KronicleGroup(**res)
+        return KronicleGroup.from_json(res)
 
     def create_group(self, group: KronicleGroup) -> KronicleGroup:
         res = self.post(route="/groups", body=group.model_dump())
-        return KronicleGroup(**res)
+        return KronicleGroup.from_json(res)
 
     def patch_group(self, group: KronicleGroup) -> KronicleGroup:
         res = self.patch(route=f"/groups/{group.id}", body=group.model_dump())
-        return KronicleGroup(**res)
+        return KronicleGroup.from_json(res)
 
     def delete_group(self, *, group_id: UUID, force: bool | None = False) -> KronicleGroup:
         res = self.delete(route=f"/groups/{group_id}?force=true" if force else f"/groups/{group_id}")
-        return KronicleGroup(**res)
+        return KronicleGroup.from_json(res)
 
     def get_users_from_group(self, *, group_id: UUID) -> list[KronicleUser]:
         res = self.get(route=f"/groups/{group_id}/users")
-        return [KronicleUser(**r) for r in res] if res else []
+        return [KronicleUser.from_json(r) for r in res] if res else []
 
     def add_user_to_group(self, *, group_id: UUID, user_id: UUID) -> dict:
         return self.post(route=f"/groups/{group_id}/users?user_id={user_id}")
@@ -115,28 +115,28 @@ class KronicleRbac(KronicleUsrLogin):
 
     def list_roles(self) -> list[KronicleRole]:
         roles = self.get(route="/roles")
-        return [KronicleRole(**r) for r in roles]
+        return [KronicleRole.from_json(r) for r in roles]
 
     def get_role_by_id(self, *, role_id: UUID) -> KronicleRole:
         res = self.get(route=f"/roles/{role_id}")
-        return KronicleRole(**res)
+        return KronicleRole.from_json(res)
 
     def get_role_by_name(self, *, name: str) -> KronicleRole:
         res = self.get(route=f"/roles?name={name}")
-        return KronicleRole(**res)
+        return KronicleRole.from_json(res)
 
     def create_role(self, role: KronicleRole) -> KronicleRole:
         res = self.post(route="/roles", body=role.model_dump())
-        return KronicleRole(**res)
+        return KronicleRole.from_json(res)
 
     def patch_role(self, role: KronicleRole) -> KronicleRole:
         res = self.patch(route=f"/roles/{role.id}", body=role.model_dump())
-        return KronicleRole(**res)
+        return KronicleRole.from_json(res)
 
     def delete_role(self, *, role_id: UUID, force: bool = False) -> KronicleRole:
         route = f"/roles/{role_id}?force=true" if force else f"/roles/{role_id}"
         res = self.delete(route=route)
-        return KronicleRole(**res)
+        return KronicleRole.from_json(res)
 
     def put(
         self,
@@ -219,12 +219,10 @@ class KronicleRbac(KronicleUsrLogin):
             route="/access-profiles/zones",
             body=access.model_dump(),
         )
-        log_d("create_zone_access_profile", "res", res)
         return KronicleZoneAccess.from_json(res)
 
     def list_zone_access_profiles(self) -> list[KronicleZoneAccess]:
         res = self.get(route="/access-profiles/zones")
-        log_d("list_zone_access_profiles", res)
         return [KronicleZoneAccess.from_json(r) for r in res] if res else []
 
     def get_zone_access_profile(self, *, profile_id: UUID) -> KronicleZoneAccess:
@@ -262,19 +260,19 @@ class KronicleRbac(KronicleUsrLogin):
     def create_row_access_profile(self, access: KronicleRowAccess) -> KronicleRowAccess:
         log_d("create_row_access_profile", access)
         res = self.post(route="/access-profiles/rows", body=access.model_dump())
-        return KronicleRowAccess(**res)
+        return KronicleRowAccess.from_json(res)
 
     def list_row_access_profiles(self) -> list[KronicleRowAccess]:
         res = self.get(route="/access-profiles/rows")
-        return [KronicleRowAccess(**r) for r in res] if res else []
+        return [KronicleRowAccess.from_json(r) for r in res] if res else []
 
     def get_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
         res = self.get(route=f"/access-profiles/rows/{profile_id}")
-        return KronicleRowAccess(**res)
+        return KronicleRowAccess.from_json(res)
 
     def delete_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
         res = self.delete(route=f"/access-profiles/rows/{profile_id}")
-        return KronicleRowAccess(**res)
+        return KronicleRowAccess.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Policies
@@ -300,19 +298,19 @@ class KronicleRbac(KronicleUsrLogin):
     def create_zone_policy(self, zone_policy: KronicleZonePolicy) -> KronicleZonePolicy:
         log_d("create_zone_policy", zone_policy)
         res = self.post(route="/policies/zones", body=zone_policy.model_dump())
-        return KronicleZonePolicy(**res)
+        return KronicleZonePolicy.from_json(res)
 
     def list_zone_policies(self) -> list[KronicleZonePolicy]:
         res = self.get(route="/policies/zones")
-        return [KronicleZonePolicy(**r) for r in res] if res else []
+        return [KronicleZonePolicy.from_json(r) for r in res] if res else []
 
     def get_zone_policy(self, *, policy_id: UUID) -> KronicleZonePolicy:
         res = self.get(route=f"/policies/zones/{policy_id}")
-        return KronicleZonePolicy(**res)
+        return KronicleZonePolicy.from_json(res)
 
     def delete_zone_policy(self, *, policy_id: UUID) -> KronicleZonePolicy:
         res = self.delete(route=f"/policies/zones/{policy_id}")
-        return KronicleZonePolicy(**res)
+        return KronicleZonePolicy.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Channel Policies
@@ -320,19 +318,19 @@ class KronicleRbac(KronicleUsrLogin):
 
     def create_channel_policy(self, channel_policy: KronicleChannelPolicy) -> KronicleChannelPolicy:
         res = self.post(route="/policies/channels", body=channel_policy.model_dump())
-        return KronicleChannelPolicy(**res)
+        return KronicleChannelPolicy.from_json(res)
 
     def list_channel_policies(self) -> list[KronicleChannelPolicy]:
         res = self.get(route="/policies/channels")
-        return [KronicleChannelPolicy(**r) for r in res] if res else []
+        return [KronicleChannelPolicy.from_json(r) for r in res] if res else []
 
     def get_channel_policy(self, *, policy_id: UUID) -> KronicleChannelPolicy:
         res = self.get(route=f"/policies/channels/{policy_id}")
-        return KronicleChannelPolicy(**res)
+        return KronicleChannelPolicy.from_json(res)
 
     def delete_channel_policy(self, *, policy_id: UUID) -> KronicleChannelPolicy:
         res = self.delete(route=f"/policies/channels/{policy_id}")
-        return KronicleChannelPolicy(**res)
+        return KronicleChannelPolicy.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Row Policies
@@ -340,16 +338,16 @@ class KronicleRbac(KronicleUsrLogin):
 
     def create_row_policy(self, row_policy: KronicleRowPolicy) -> KronicleRowPolicy:
         res = self.post(route="/policies/rows", body=row_policy.model_dump())
-        return KronicleRowPolicy(**res)
+        return KronicleRowPolicy.from_json(res)
 
     def list_row_policies(self) -> list[KronicleRowPolicy]:
         res = self.get(route="/policies/rows")
-        return [KronicleRowPolicy(**r) for r in res] if res else []
+        return [KronicleRowPolicy.from_json(r) for r in res] if res else []
 
     def get_row_policy(self, *, policy_id: UUID) -> KronicleRowPolicy:
         res = self.get(route=f"/policies/rows/{policy_id}")
-        return KronicleRowPolicy(**res)
+        return KronicleRowPolicy.from_json(res)
 
     def delete_row_policy(self, *, policy_id: UUID) -> KronicleRowPolicy:
         res = self.delete(route=f"/policies/rows/{policy_id}")
-        return KronicleRowPolicy(**res)
+        return KronicleRowPolicy.from_json(res)

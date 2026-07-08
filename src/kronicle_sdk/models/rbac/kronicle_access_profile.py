@@ -23,9 +23,9 @@ class KronicleAccessProfile(KronicleRbacBase):
             "role": cls._extract_field(d, "role", KronicleRole),
         }
 
-    def model_dump(self, *args, to_payload=True, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
-        if not to_payload:
+    def model_dump(self, *args, mode="json", flatten=False, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
+        if not flatten:
             return d
         d["role_id"] = uuid_to_str(self.role.id)
         d["role_name"] = self.role.name
@@ -43,9 +43,9 @@ class KronicleZoneAccess(KronicleAccessProfile):
             zone=cls._extract_field(d, "zone", KronicleZone),
         )
 
-    def model_dump(self, *args, to_payload=True, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, to_payload=to_payload, exclude_none=exclude_none, **kwargs)
-        if not to_payload:
+    def model_dump(self, *args, mode="json", flatten=False, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
+        if not flatten:
             return d
         d["zone_id"] = uuid_to_str(self.zone.id)
         d["zone_name"] = self.zone.name
@@ -67,11 +67,11 @@ class KronicleChannelAccess(KronicleAccessProfile):
             channel=cls._extract_field(d, "channel", KronicleChannel),
         )
 
-    def model_dump(self, *args, to_payload=True, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, to_payload=to_payload, exclude_none=exclude_none, **kwargs)
-        if not to_payload:
+    def model_dump(self, *args, mode="json", flatten=False, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
+        if not flatten:
             return d
-        d["id"] = uuid_to_str(self.channel.id)
+        d["channel_id"] = uuid_to_str(self.channel.id)
         d["channel_name"] = self.channel.name
         d.pop("channel")
         return d
@@ -83,3 +83,25 @@ class KronicleRowAccess(KronicleAccessProfile):
     @classmethod
     def from_json(cls, d) -> KronicleRowAccess:
         return KronicleRowAccess(**d)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    zone_access = KronicleZoneAccess.from_json(
+        {
+            "id": "c64c79e1-941c-45d4-a333-5151f2efc098",
+            "name": "Zone ZoneA Writer access",
+            "details": None,
+            "role": {
+                "id": "d0332ec8-78ba-476c-99b5-cfc0af17fda7",
+                "name": "Writer",
+                "details": {},
+                "description": "",
+                "permissions": ["data:access", "channel:read", "row:create"],
+                "restrictions": [],
+            },
+            "description": "Write access to Zone A",
+            "zone": {"id": "e1e90f77-5e14-4a1d-a2f8-2a5a420e6c1e", "name": "ZoneA", "details": {"init": True}},
+        }
+    )
+
+    print(zone_access)

@@ -24,10 +24,18 @@ class KronicleWriter(KronicleAbstractChannelConnector):
     def prefix(self) -> str:
         return "/data/v1"
 
-    def create_channel(self, body: KronicleChannel | dict, *, zone_id: UUID | str):
-        """Creates a new channel if it doesn't exist already and insert data rows"""
-        zone_id = ensure_uuid4(zone_id)
+    def create_channel(self, body: KronicleChannel | dict, *, zone_id: UUID | str | None = None):
+        """Creates a new channel in a zone and inserts data rows.
+
+        ``zone_id`` can be passed explicitly or extracted from the model's
+        ``zone`` attribute.
+        """
         payload = self._ensure_body_as_payload(body)
+        if not zone_id and isinstance(payload, KronicleChannel) and payload.zone:
+            zone_id = payload.zone.id
+        if not zone_id:
+            raise ValueError("zone_id is required to create a channel")
+        zone_id = ensure_uuid4(zone_id)
         return self.post(route=f"zones/{zone_id}/channels", body=payload)
 
     def patch_channel(

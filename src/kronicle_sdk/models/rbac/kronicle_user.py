@@ -110,8 +110,8 @@ class KronicleUser(KronicleRbacBase):
     def validate_is_su(cls, v: bool | None) -> bool | None:
         return True if v is True else None
 
-    def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
-        d = super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+    def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
 
         if self.is_active:
             d.pop("is_active", None)

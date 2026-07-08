@@ -199,6 +199,8 @@ class KronicleAbstractConnector(ABC):
         """Ensure the result is a KronicleChannel."""
         if isinstance(res, KronicleChannel):
             return res
+        if isinstance(res, dict):
+            return KronicleChannel.from_json(res)
         raise TypeError(f"KronicleChannel expected, got '{get_type(res)}' for {res}")
 
     @classmethod
