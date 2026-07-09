@@ -46,6 +46,11 @@ def skip_nones(data: dict) -> dict:
     return {k: v for k, v in data.items() if v is not None}
 
 
+def remove_alt_field(d: dict, keep: str, alt: str):
+    if alt in d:
+        d.setdefault(keep, d.pop(alt))
+
+
 if __name__ == "__main__":  # pragma: no-cover
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))

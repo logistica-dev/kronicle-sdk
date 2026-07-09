@@ -2,6 +2,7 @@
 from uuid import UUID
 
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
+from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 
 
@@ -46,15 +47,15 @@ class KronicleCore(KronicleUsrLogin):
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 
-    def list_core_channels(self, *, zone_id: UUID | None = None) -> list[dict]:
+    def list_core_channels(self, *, zone_id: UUID | None = None) -> list[KronicleChannel]:
         if zone_id:
             channels = self.get(route=f"/zones/{zone_id}/channels")
         channels = self.get(route="/channels")
-        return channels
+        return [KronicleChannel.from_json(c) for c in channels]
 
-    def get_core_channel(self, *, channel_id: UUID) -> dict | None:
+    def get_core_channel(self, *, channel_id: UUID) -> KronicleChannel | None:
         res = self.get(route=f"/channels/{channel_id}")
-        return res if res else None
+        return res if KronicleChannel.from_json(res) else None
 
     def patch_core_channel(
         self,
@@ -63,7 +64,7 @@ class KronicleCore(KronicleUsrLogin):
         name: str | None = None,
         details: dict | None = None,
         zone_id: UUID | None = None,
-    ) -> dict:
+    ) -> KronicleChannel:
         body = {}
         if name is not None:
             body["name"] = name
@@ -71,10 +72,10 @@ class KronicleCore(KronicleUsrLogin):
             body["details"] = details
         if zone_id is not None:
             body["zone_id"] = str(zone_id)
-        return self.patch(route=f"/channels/{channel_id}", body=body)
+        return KronicleChannel.from_json(self.patch(route=f"/channels/{channel_id}", body=body))
 
-    def delete_core_channel(self, channel_id: UUID):
-        return self.delete(route=f"/channels/{channel_id}")
+    def delete_core_channel(self, channel_id: UUID) -> KronicleChannel:
+        return KronicleChannel.from_json(self.delete(route=f"/channels/{channel_id}"))
 
     # ----------------------------------------------------------------------------------------------
     # Sync

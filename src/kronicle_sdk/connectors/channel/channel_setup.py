@@ -8,7 +8,7 @@ from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.kronicle_errors import KronicleOperationError
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
-from kronicle_sdk.utils.log import log_w
+from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
 
 
@@ -36,6 +36,7 @@ class KronicleSetup(KronicleWriter):
         if not zone_id:
             raise ValueError("zone_id is required to create a channel")
         zone_id = ensure_uuid4(zone_id)
+        log_d("T create_channel", payload)
         return self.post(route=f"zones/{zone_id}/channels", body=payload)
 
     def upsert_channel(self, body: KronicleChannel | dict):
@@ -87,7 +88,7 @@ if __name__ == "__main__":  # pragma: no-cover
     max_chan = kronicle_setup.get_channel_with_max_rows()
     if max_chan and (max_chan_id := max_chan.id):
         log_d(here, "channel with max rows", kronicle_setup.get_channel(max_chan_id))
-        rows: list = kronicle_setup.get_rows_for_channel(max_chan_id, "dict")  # type:ignore
+        rows: list = kronicle_setup.get_rows_for_channel(max_chan_id, "dict")  # type: ignore
         for i, row in enumerate(rows):
             log_d(here, f"row {i}", row)
         log_d(here, "nb rows", len(rows))

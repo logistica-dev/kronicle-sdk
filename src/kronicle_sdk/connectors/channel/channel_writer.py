@@ -94,7 +94,7 @@ if __name__ == "__main__":  # pragma: no-cover
     now_tag = now_local()
 
     payload = {
-        "channel_id": channel_id,
+        "id": channel_id,
         "name": channel_name,
         "channel_schema": {"time": IsoDateTime, "temperature": float},
         "metadata": {"unit": "°C"},

@@ -66,7 +66,7 @@ class KronicleChannelAccess(KronicleAccessProfile):
         d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["channel_id"] = uuid_to_str(self.channel.id)
+        d["id"] = uuid_to_str(self.channel.id)
         d["channel_name"] = self.channel.name
         d.pop("channel")
         return d

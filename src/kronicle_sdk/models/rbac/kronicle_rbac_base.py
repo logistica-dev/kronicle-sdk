@@ -32,11 +32,17 @@ class KronicleRbacBase(BaseModel):
     def validate_name(cls, v: str | None) -> str | None:
         if v is None:
             return v
+        # log_d("validate_name", v)
         if not re.fullmatch(cls._name_regex, v):
             raise ValueError(
                 "Name must start with a letter, be 4-64 characters long, "
                 "and only contain letters, digits, '_', '.', '-', or space"
             )
+            # log_w(
+            #     "validate_name",
+            #     "Name must start with a letter, be 4-64 characters long, "
+            #     "and only contain letters, digits, '_', '.', '-', or space",
+            # )
         return v
 
     def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:

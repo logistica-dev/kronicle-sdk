@@ -21,6 +21,7 @@ from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeCh
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
+from kronicle_sdk.utils.dict_utils import remove_alt_field
 from kronicle_sdk.utils.str_utils import uuid_to_str
 
 mod = "KronicleChannel"
@@ -177,9 +178,7 @@ class KronicleChannel(KronicleRbacBase):
                 normalized[col] = kt.to_kronicle_type()
             d["channel_schema"] = normalized
 
-        if channel_id := d.get("channel_id"):
-            d["id"] = channel_id
-            d.pop("channel_id")
+        remove_alt_field(d, keep="id", alt="channel_id")
 
         if zone := d.get("zone"):
             d["zone"] = KronicleZone.from_json(zone)
