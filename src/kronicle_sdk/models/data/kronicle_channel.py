@@ -18,10 +18,9 @@ from uuid import UUID
 from pydantic import field_validator, model_validator
 
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
-from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local, now_utc
+from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
-from kronicle_sdk.utils.log import log_d
 from kronicle_sdk.utils.str_utils import uuid_to_str
 
 mod = "KronicleChannel"
@@ -240,109 +239,3 @@ class KronicleChannel(KronicleRbacBase):
 
     def get_columns(self):
         return self.columns if self.columns else self._rows_to_columns()
-
-
-if __name__ == "__main__":  # pragma: no-cover
-    from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
-
-    here = "Kronicle payload"
-
-    now1 = now_local()
-    now2 = now_utc()
-    payload_dict = {
-        "id": uuid4_str(),
-        "name": "temperature_channel",
-        "channel_schema": {
-            "time": "IsoDateTime",
-            "temperature": "float",
-            "pressure": "optional[float]",
-        },
-        "metadata": {"unit": "C"},
-        "tags": {"test": True},
-        "rows": [
-            {"time": now1, "temperature": 21.5},
-            {"time": now2, "temperature": 22.3},
-        ],
-        "columns": {
-            "time": [now1, now2],
-            "temperature": [21.5, 22.3],
-        },
-        "received_at": now_local(),
-        "available_data": 2,
-        "op_status": "success",
-        "op_details": {"issued_at": now_local()},
-    }
-
-    log_d(here, "=== Creating KronicleChannel from dict ===")
-    payload = KronicleChannel.from_json(payload_dict)
-    log_d(here, payload)
-
-    log_d(here, "=== Serializing back to JSON ===")
-    json_str = payload.model_dump_json()
-    log_d(here, json_str)
-
-    log_d(here, "=== Creating KronicleChannel from JSON string ===")
-    payload_from_str = KronicleChannel.from_str(json_str)
-    log_d(here, payload_from_str)
-
-    log_d(here, "=== Checking validation ===")
-    try:
-        bad_payload = KronicleChannel(channel_schema={"time": "datetime", "temp": "unknown_type"})
-    except ValueError as e:
-        log_d(here, "Caught expected validation error:", e)
-
-    payload_dict = {
-        "id": uuid4_str(),
-        "name": "temperature_channel",
-        "channel_schema": {
-            "time": "datetime",
-            "temperature": float,  # Python type auto-normalized
-            "pressure": KronicableTypeChecker(float).to_kronicle_type(),  # can also wrap
-        },
-        "metadata": {"unit": "C"},
-        "tags": {"test": True},
-        "rows": [{"time": now_local(), "temperature": 21.5}],
-        "columns": {"time": [now_local()], "temperature": [21.5]},
-        "received_at": now_local(),
-        "available_data": 1,
-        "op_status": "success",
-        "op_details": {"issued_at": now_local()},
-    }
-
-    log_d(here, "=== Creating KronicleChannel from dict ===")
-    payload = KronicleChannel.from_json(payload_dict)
-    log_d(here, payload)
-
-    log_d(here, "=== Serializing back to JSON ===")
-    json_str = payload.model_dump_json()
-    log_d(here, json_str)
-
-    log_d(here, "=== Creating KronicleChannel from JSON string ===")
-    payload_from_str = KronicleChannel.from_str(json_str)
-    log_d(here, payload_from_str)
-
-    log_d(here, "=== Checking validation ===")
-    try:
-        bad_payload = KronicleChannel(channel_schema={"time": "datetime", "temp": "unknown_type"})
-    except ValueError as e:
-        log_d(here, "Caught expected validation error:", e)
-
-    channel_id = uuid4_str()
-    name = f"demo_channel_{tiny_id()}"
-    now_tag = now_local()
-
-    payload = {
-        "id": channel_id,
-        "name": name,
-        "channel_schema": {"time": datetime, "temperature": float},
-        "metadata": {"unit": "°C"},
-        "tags": {"test": now_tag},
-        "rows": [
-            {"time": "2025-01-01T00:00:00Z", "temperature": 12.3},
-            {"time": "2025-01-01T00:01:00Z", "temperature": 12.8},
-        ],
-    }
-
-    log_d(here, "=== Creating KronicleChannel from dict ===")
-    kp = KronicleChannel.from_json(d=payload)
-    log_d(here, kp)

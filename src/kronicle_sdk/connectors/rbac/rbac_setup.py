@@ -312,6 +312,10 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.delete(route=f"/policies/zones/{policy_id}")
         return KronicleZonePolicy.from_json(res)
 
+    def patch_zone_policy(self, zone_policy: KronicleZonePolicy) -> KronicleZonePolicy:
+        res = self.patch(route=f"/policies/zones/{zone_policy.id}", body=zone_policy.model_dump())
+        return KronicleZonePolicy.from_json(res)
+
     # ----------------------------------------------------------------------------------------------
     # Channel Policies
     # ----------------------------------------------------------------------------------------------
@@ -332,6 +336,10 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.delete(route=f"/policies/channels/{policy_id}")
         return KronicleChannelPolicy.from_json(res)
 
+    def patch_channel_policy(self, channel_policy: KronicleChannelPolicy) -> KronicleChannelPolicy:
+        res = self.patch(route=f"/policies/channels/{channel_policy.id}", body=channel_policy.model_dump())
+        return KronicleChannelPolicy.from_json(res)
+
     # ----------------------------------------------------------------------------------------------
     # Row Policies
     # ----------------------------------------------------------------------------------------------
@@ -350,4 +358,8 @@ class KronicleRbac(KronicleUsrLogin):
 
     def delete_row_policy(self, *, policy_id: UUID) -> KronicleRowPolicy:
         res = self.delete(route=f"/policies/rows/{policy_id}")
+        return KronicleRowPolicy.from_json(res)
+
+    def patch_row_policy(self, row_policy: KronicleRowPolicy) -> KronicleRowPolicy:
+        res = self.patch(route=f"/policies/rows/{row_policy.id}", body=row_policy.model_dump())
         return KronicleRowPolicy.from_json(res)

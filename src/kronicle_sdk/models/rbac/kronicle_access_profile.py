@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
+from kronicle_sdk.models.rbac.kronicle_row import KronicleRow
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.str_utils import uuid_to_str
 
@@ -59,11 +58,7 @@ class KronicleChannelAccess(KronicleAccessProfile):
     @classmethod
     def from_json(cls, d) -> KronicleChannelAccess:
         return KronicleChannelAccess(
-            id=d["id"],
-            name=d.get("name"),
-            details=d.get("details"),
-            description=d.get("description"),
-            role=cls._extract_field(d, "role", KronicleRole),
+            **cls._extract_self(d),
             channel=cls._extract_field(d, "channel", KronicleChannel),
         )
 
@@ -78,11 +73,14 @@ class KronicleChannelAccess(KronicleAccessProfile):
 
 
 class KronicleRowAccess(KronicleAccessProfile):
-    row_id: UUID
+    row: KronicleRow
 
     @classmethod
     def from_json(cls, d) -> KronicleRowAccess:
-        return KronicleRowAccess(**d)
+        return KronicleRowAccess(
+            **cls._extract_self(d),
+            row=cls._extract_field(d, "row", KronicleRow),
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

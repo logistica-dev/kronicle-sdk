@@ -60,6 +60,12 @@ class KronicleZonePolicy(KroniclePolicy):
             access_profile=cls._extract_field(d, "access_profile", KronicleZoneAccess),
         )
 
+    def flatten(self) -> dict:
+        d = self.model_dump()
+        d["zone_id"] = uuid_to_str(self.access_profile.zone.id)
+        d.pop("access_profile")
+        return d
+
 
 class KronicleChannelPolicy(KroniclePolicy):
     access_profile: KronicleChannelAccess
@@ -73,7 +79,7 @@ class KronicleChannelPolicy(KroniclePolicy):
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["id"] = uuid_to_str(self.access_profile.channel.id)
+        d["channel_id"] = uuid_to_str(self.access_profile.channel.id)
         d.pop("access_profile")
         return d
 
@@ -81,8 +87,15 @@ class KronicleChannelPolicy(KroniclePolicy):
 class KronicleRowPolicy(KroniclePolicy):
     access_profile: KronicleRowAccess
 
+    @classmethod
+    def from_json(cls, d) -> KronicleRowPolicy:
+        return KronicleRowPolicy(
+            **cls._extract_self(d),
+            access_profile=cls._extract_field(d, "access_profile", KronicleRowAccess),
+        )
+
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["row_id"] = uuid_to_str(self.access_profile.row_id)
+        d["row_id"] = uuid_to_str(self.access_profile.row.id)
         d.pop("access_profile")
         return d

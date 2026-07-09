@@ -63,4 +63,9 @@ class KronicleRbacBase(BaseModel):
     def _extract_field(cls, d: dict, field_name: str, T: type):
         if not (field := d.get(field_name)):
             raise ValueError(f"'{field_name}' not found in {d}")
-        return T.from_json(field)
+        if hasattr(T, "from_json"):
+            return T.from_json(field)
+        try:
+            return T(field)
+        except Exception as e:
+            raise ValueError(f"'{field_name}' is not a {T.__name__}") from e
