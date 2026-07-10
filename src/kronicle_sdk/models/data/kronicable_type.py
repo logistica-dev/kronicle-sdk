@@ -246,7 +246,7 @@ if __name__ == "__main__":  # pragma: no-cover
     def print_kronicable(t: str | type | Union[Any, Any], t_name: str | None = None):
         if not t_name:
             try:
-                t_name = t.__name__  # type:ignore
+                t_name = t.__name__  # type: ignore
             except AttributeError:
                 t_name = str(t)
         kt = KronicableTypeChecker(t)

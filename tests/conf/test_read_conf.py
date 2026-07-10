@@ -157,6 +157,6 @@ class TestSettings:
 def test_get_conf_factory(monkeypatch):
     monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
     monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
-    conf = get_conf(None)
+    conf = get_conf()
     assert isinstance(conf, Settings)
     assert conf.connection.usr == "envuser"
