@@ -9,6 +9,7 @@ from typing import Any
 from kronicle_sdk.conf.env_keys import (
     KRONICLE_HOST,
     KRONICLE_PORT,
+    KRONICLE_SU_INFO,
     KRONICLE_SU_NAME,
     KRONICLE_SU_PASS,
     KRONICLE_USR_NAME,
@@ -17,6 +18,7 @@ from kronicle_sdk.conf.env_keys import (
 from kronicle_sdk.utils.conf_utils import read_ini_conf
 from kronicle_sdk.utils.file_utils import is_file
 from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.str_utils import decode_b64url
 
 
 @dataclass
@@ -65,12 +67,18 @@ class Settings:
                 "Please ensure KRONICLE_USR_NAME and KRONICLE_USR_PASS environment variables are set."
             )
         self.connection = ConnectionInformation(host, port, usr, pwd)
-
-        su_usr = self.get_setting(env=KRONICLE_SU_NAME, param="su_username")
-        su_pwd = self.get_setting(env=KRONICLE_SU_PASS, param="su_password")
-        if su_usr and su_pwd:
-            self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
-        else:
+        try:
+            su_usr = self.get_setting(env=KRONICLE_SU_NAME, param="su_username")
+            su_pwd = self.get_setting(env=KRONICLE_SU_PASS, param="su_password")
+            if su_usr and su_pwd:
+                self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
+            else:
+                b64_su_creds = self.get_setting(env=KRONICLE_SU_INFO, param="su_creds")
+                if b64_su_creds:
+                    su_usr, su_pwd = decode_b64url(b64_su_creds).split(":")
+                    self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
+                    return
+        finally:
             self.connection_su = None
             log_d(here, "No credentials found for SU.")
 
