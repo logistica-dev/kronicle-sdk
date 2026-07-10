@@ -9,7 +9,7 @@ from typing import Any
 from kronicle_sdk.conf.env_keys import (
     KRONICLE_HOST,
     KRONICLE_PORT,
-    KRONICLE_SU_INFO,
+    KRONICLE_SU_CREDS,
     KRONICLE_SU_NAME,
     KRONICLE_SU_PASS,
     KRONICLE_USR_NAME,
@@ -67,27 +67,26 @@ class Settings:
                 "Please ensure KRONICLE_USR_NAME and KRONICLE_USR_PASS environment variables are set."
             )
         self.connection = ConnectionInformation(host, port, usr, pwd)
-        try:
-            su_usr = self.get_setting(env=KRONICLE_SU_NAME, param="su_username")
-            su_pwd = self.get_setting(env=KRONICLE_SU_PASS, param="su_password")
-            if su_usr and su_pwd:
-                self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
-            else:
-                b64_su_creds = self.get_setting(env=KRONICLE_SU_INFO, param="su_creds")
-                if b64_su_creds:
-                    su_info = decode_b64url(b64_su_creds).split(":")
-                    if len(su_info) == 3:
-                        su_usr, _, su_pwd = su_info
-                    elif len(su_info) == 2:
-                        su_usr, su_pwd = su_info
-                    else:
-                        log_e(here, "Incorrect syntax for SU creds")
-                        raise RuntimeError("Incorrect syntax for SU creds")
-                    self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
-                    return
-        finally:
-            self.connection_su = None
-            log_d(here, "No credentials found for SU.")
+        self.connection_su = self._extract_su_co(host, port)
+
+    def _extract_su_co(self, host, port) -> ConnectionInformation | None:
+        here = "extract_su_co"
+        su_usr = self.get_setting(env=KRONICLE_SU_NAME, param="su_username")
+        su_pwd = self.get_setting(env=KRONICLE_SU_PASS, param="su_password")
+        if su_usr and su_pwd:
+            return ConnectionInformation(host, port, su_usr, su_pwd)
+
+        b64_su_creds = self.get_setting(env=KRONICLE_SU_CREDS, param="su_creds")
+        if b64_su_creds:
+            su_info = decode_b64url(b64_su_creds).split(":")
+            if len(su_info) == 2:
+                su_usr, su_pwd = su_info
+                return ConnectionInformation(host, port, su_usr, su_pwd)
+            log_e(here, "Incorrect syntax for SU creds, expected base64url encoded usr:pwd")
+            return None
+
+        log_d(here, "No credentials found for SU.")
+        return None
 
     def get_setting(
         self,
