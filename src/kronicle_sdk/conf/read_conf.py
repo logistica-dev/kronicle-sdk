@@ -17,7 +17,7 @@ from kronicle_sdk.conf.env_keys import (
 )
 from kronicle_sdk.utils.conf_utils import read_ini_conf
 from kronicle_sdk.utils.file_utils import is_file
-from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.log import log_d, log_e, log_w
 from kronicle_sdk.utils.str_utils import decode_b64url
 
 
@@ -75,7 +75,14 @@ class Settings:
             else:
                 b64_su_creds = self.get_setting(env=KRONICLE_SU_INFO, param="su_creds")
                 if b64_su_creds:
-                    su_usr, su_pwd = decode_b64url(b64_su_creds).split(":")
+                    su_info = decode_b64url(b64_su_creds).split(":")
+                    if len(su_info) == 3:
+                        su_usr, _, su_pwd = su_info
+                    elif len(su_info) == 2:
+                        su_usr, su_pwd = su_info
+                    else:
+                        log_e(here, "Incorrect syntax for SU creds")
+                        raise RuntimeError("Incorrect syntax for SU creds")
                     self.connection_su = ConnectionInformation(host, port, su_usr, su_pwd)
                     return
         finally:
