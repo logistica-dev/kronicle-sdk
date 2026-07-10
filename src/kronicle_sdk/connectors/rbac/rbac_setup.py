@@ -95,7 +95,7 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.patch(route=f"/groups/{group.id}", body=group.model_dump())
         return KronicleGroup.from_json(res)
 
-    def delete_group(self, *, group_id: UUID, force: bool | None = False) -> KronicleGroup:
+    def delete_group(self, *, group_id: UUID, force: bool = False) -> KronicleGroup:
         res = self.delete(route=f"/groups/{group_id}?force=true" if force else f"/groups/{group_id}")
         return KronicleGroup.from_json(res)
 

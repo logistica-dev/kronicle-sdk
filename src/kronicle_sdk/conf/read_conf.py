@@ -102,7 +102,7 @@ class Settings:
             return default
 
 
-def get_conf(ini_file: str | None = "./.conf/config.ini"):
+def get_conf(ini_file: str = "./.conf/config.ini"):
     return Settings(ini_file=ini_file)
 
 

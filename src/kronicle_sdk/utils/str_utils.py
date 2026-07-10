@@ -53,7 +53,7 @@ def uuid_to_str(v: Any) -> Any:
     return v
 
 
-def serialize(x: Any, *, exclude_none: bool | None = True) -> Any:
+def serialize(x: Any, *, exclude_none: bool = True) -> Any:
     if isinstance(x, (bool, int, float)):
         return x
     if isinstance(x, UUID):
@@ -207,7 +207,7 @@ if __name__ == "__main__":  # pragma: no-cover
     print(here, "strip_quotes 'toto':", strip_quotes("'toto'"))
     print(here, 'strip_quotes "toto":', strip_quotes('"toto"'))
     ll = [u := uuid4(), {}, [], "", False, True]
-    s = {u, "", False, True, 42, 0, 0.0}
+    s = {u, "", False, True, 42}
     t = (u, {}, [], "", False, True, ll)
     d = {
         "uuid": u,
