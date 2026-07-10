@@ -85,10 +85,10 @@ class Settings:
                 if len(su_info) == 2:
                     su_usr, su_pwd = su_info
                     return ConnectionInformation(host, port, su_usr, su_pwd)
-                log_e(here, "Incorrect syntax for SU creds, expected base64url encoded usr:pwd")
-                return None
-        finally:
-            log_d(here, "No credentials found for SU.")
+        except Exception:
+            log_e(here, "Incorrect syntax for SU creds, expected base64url encoded usr:pwd")
+            return None
+        log_d(here, "No credentials found for SU.")
         return None
 
     def get_setting(
