@@ -12,6 +12,7 @@ from kronicle_sdk.models.rbac.kronicle_access_profile import (
     KronicleZoneAccess,
 )
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
+from kronicle_sdk.models.rbac.kronicle_permissions import KroniclePermissions
 from kronicle_sdk.models.rbac.kronicle_policy import (
     KronicleChannelPolicy,
     KronicleRowAccess,
@@ -191,6 +192,18 @@ class KronicleRbac(KronicleUsrLogin):
     def check_user_in_group(self, *, user_id: UUID, group_id: UUID, indirect: bool = False) -> dict:
         params = {"indirect": "1"} if indirect else None
         return self.get(route=f"/users/{user_id}/groups/{group_id}", params=params)
+
+    # ----------------------------------------------------------------------------------------------
+    # Introspection: permissions
+    # ----------------------------------------------------------------------------------------------
+
+    def get_user_permissions(self, *, user_id: UUID) -> KroniclePermissions:
+        res = self.get(route=f"/users/{user_id}/permissions")
+        return KroniclePermissions.from_json(res)
+
+    def get_group_permissions(self, *, group_id: UUID) -> KroniclePermissions:
+        res = self.get(route=f"/groups/{group_id}/permissions")
+        return KroniclePermissions.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
     # Access Profiles (preemptive scoped roles)

@@ -1,4 +1,4 @@
-# tests/test_read_conf.py
+# tests/conf/test_read_conf.py
 import os
 from configparser import ConfigParser
 from unittest.mock import patch
