@@ -220,14 +220,14 @@ class KronicleAbstractConnector(ABC):
                 )
         return res
 
-    def _ensure_body_as_payload(self, body: KronicleChannel | dict) -> KronicleChannel:
+    def _ensure_kronicle_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
         return body if isinstance(body, KronicleChannel) else KronicleChannel.from_json(body)
 
     def _ensure_payload_id(self, body: KronicleChannel | dict) -> str:
         here = "abc_connector._ensure_payload_id"
         log_d(here, "type(body)", type(body).__name__)
         log_d(here, "body", body)
-        payload = self._ensure_body_as_payload(body)
+        payload = self._ensure_kronicle_channel(body)
         log_d(here, "KronicleChannel", payload)
 
         if not (channel_id := payload.id):

@@ -74,6 +74,7 @@ def _validate_password(password: str | None) -> str | None:  # noqa: C901
 
 class KronicleUser(KronicleRbacBase):
     _name_regex: ClassVar[str] = r"[A-Za-z][A-Za-z0-9_ .@-]{3,63}"
+    _email_regex: ClassVar[str] = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
 
     name: str | None = None
     email: str
@@ -82,6 +83,13 @@ class KronicleUser(KronicleRbacBase):
     full_name: str | None = None
     is_active: bool | None = None
     is_su: bool | None = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_syntax(cls, v: str) -> str:
+        if not v or not re.fullmatch(cls._email_regex, v):
+            raise ValueError("Invalid email address")
+        return v.lower()
 
     @field_validator("password")
     @classmethod

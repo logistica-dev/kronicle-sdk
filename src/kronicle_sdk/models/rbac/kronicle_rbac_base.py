@@ -12,6 +12,8 @@ from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
 
 T = TypeVar("T")
 
+_MAX_DETAILS_JSON_SIZE = 64 * 1024  # 64KB, matching kronicle's server InputSchema
+
 
 class KronicleRbacBase(BaseModel):
     _name_regex: ClassVar[str] = r"[A-Za-z][A-Za-z0-9_ .-]{3,63}"
@@ -43,6 +45,15 @@ class KronicleRbacBase(BaseModel):
             #     "Name must start with a letter, be 4-64 characters long, "
             #     "and only contain letters, digits, '_', '.', '-', or space",
             # )
+        return v
+
+    @field_validator("details", mode="after")
+    @classmethod
+    def validate_details_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        if v is None:
+            return v
+        if len(dumps(v).encode("utf-8")) > _MAX_DETAILS_JSON_SIZE:
+            raise ValueError("details field is too large")
         return v
 
     def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:

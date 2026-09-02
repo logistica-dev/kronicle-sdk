@@ -30,7 +30,7 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         ``zone_id`` can be passed explicitly or extracted from the model's
         ``zone`` attribute.
         """
-        payload = self._ensure_body_as_payload(body)
+        payload = self._ensure_kronicle_channel(body)
         if not zone_id and isinstance(payload, KronicleChannel) and payload.zone:
             zone_id = payload.zone.id
         if not zone_id:
@@ -46,13 +46,13 @@ class KronicleWriter(KronicleAbstractChannelConnector):
     ):
         """Creates a new channel if it doesn't exist already and insert data rows"""
         zone_id = ensure_uuid4(zone_id) if zone_id else None
-        payload = self._ensure_body_as_payload(body)
+        payload = self._ensure_kronicle_channel(body)
         channel_id = ensure_uuid4(payload.id)
         return self.patch(route=f"channels/{channel_id}", body=payload)
 
     def insert_rows_and_update_channel(self, body: KronicleChannel | dict):
         """Creates a new channel if it doesn't exist already and insert data rows"""
-        payload = self._ensure_body_as_payload(body)
+        payload = self._ensure_kronicle_channel(body)
         channel_id = ensure_uuid4(payload.id)
         return self.post(route=f"channels/{channel_id}", body=payload)
 

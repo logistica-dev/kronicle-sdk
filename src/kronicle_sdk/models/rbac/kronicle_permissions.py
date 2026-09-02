@@ -34,7 +34,7 @@ class KroniclePermissions(KronicleRbacBase):
     @classmethod
     def from_json(cls, d: dict) -> KroniclePermissions:
         return KroniclePermissions(
-            direct_roles=[KronicleRole.from_json(r) for r in d.get("direct_roles", [])],
+            direct_roles=[KronicleRole.from_json(r.get("role") or r) for r in d.get("direct_roles", [])],
             group_roles=[KronicleGroupRole.from_json(gr) for gr in d.get("group_roles", [])],
             zone_policies=[KronicleZonePolicy.from_json(p) for p in d.get("zone_policies", [])],
             channel_policies=[KronicleChannelPolicy.from_json(p) for p in d.get("channel_policies", [])],

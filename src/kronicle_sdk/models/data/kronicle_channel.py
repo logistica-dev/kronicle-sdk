@@ -22,7 +22,7 @@ from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.dict_utils import remove_alt_field
-from kronicle_sdk.utils.str_utils import uuid_to_str
+from kronicle_sdk.utils.str_utils import tiny_id, uuid_to_str
 
 mod = "KronicleChannel"
 
@@ -197,8 +197,10 @@ class KronicleChannel(KronicleRbacBase):
         """Convert to a Python dict."""
         return self.model_dump(**args)
 
-    def model_dump(self, **args) -> dict:
-        d = super().model_dump(**args)
+    def model_dump(self, *args, mode="json", flatten=False, exclude_none=True, **kwargs) -> dict:
+        d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
+        if not flatten:
+            return d
         if self.zone:
             d["zone_id"] = uuid_to_str(self.zone.id)
             d["zone_name"] = self.zone.name
@@ -238,3 +240,18 @@ class KronicleChannel(KronicleRbacBase):
 
     def get_columns(self):
         return self.columns if self.columns else self._rows_to_columns()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    tag = tiny_id()
+    channel = KronicleChannel(
+        name=f"test_channel_{tag}",
+        channel_schema={"time": "datetime", "value": "float"},
+        rows=[
+            {"time": "2025-01-10T00:00:00Z", "value": 1.0},
+            {"time": "2025-01-11T00:00:00Z", "value": 2.0},
+        ],
+        metadata={"source": "integration-test"},
+        tags={"test": True},
+    )
+    print(channel)

@@ -41,12 +41,16 @@ class TestKronicleRbacRoles:
         assert role.name == "admin"
 
     def test_get_role_by_id_not_found(self, rbac, monkeypatch):
+        from kronicle_sdk.models.kronicle_errors import KronicleHTTPError, KronicleHTTPErrorModel
+
         def mock_get(*, route, **kw):
-            return None
+            raise KronicleHTTPError(
+                KronicleHTTPErrorModel(status=404, error="Not found", message="role not found", url=route)
+            )
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        role = rbac.get_role_by_id(role_id=uuid4())
-        assert role is None
+        with pytest.raises(KronicleHTTPError):
+            rbac.get_role_by_id(role_id=uuid4())
 
     def test_get_role_by_name_found(self, rbac, monkeypatch):
         fake = {"id": str(uuid4()), "name": "viewer", "permissions": ["channel:read"]}
@@ -60,12 +64,16 @@ class TestKronicleRbacRoles:
         assert role.name == "viewer"
 
     def test_get_role_by_name_not_found(self, rbac, monkeypatch):
+        from kronicle_sdk.models.kronicle_errors import KronicleHTTPError, KronicleHTTPErrorModel
+
         def mock_get(*, route, **kw):
-            return None
+            raise KronicleHTTPError(
+                KronicleHTTPErrorModel(status=404, error="Not found", message="role not found", url=route)
+            )
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        role = rbac.get_role_by_name(name="nonexistent")
-        assert role is None
+        with pytest.raises(KronicleHTTPError):
+            rbac.get_role_by_name(name="nonexistent")
 
     def test_create_role(self, rbac, monkeypatch):
         rid = uuid4()
@@ -89,7 +97,7 @@ class TestKronicleRbacRoles:
             return fake
 
         monkeypatch.setattr(rbac, "patch", mock_patch)
-        role = rbac.patch_role(role_id=rid, role=KronicleRole(name="updated"))
+        role = rbac.patch_role(KronicleRole(id=rid, name="updated"))
         assert role.name == "updated"
 
     def test_delete_role(self, rbac, monkeypatch):
@@ -105,12 +113,16 @@ class TestKronicleRbacRoles:
         assert role.name == "deleted"
 
     def test_delete_role_not_found(self, rbac, monkeypatch):
+        from kronicle_sdk.models.kronicle_errors import KronicleHTTPError, KronicleHTTPErrorModel
+
         def mock_delete(*, route, **kw):
-            return None
+            raise KronicleHTTPError(
+                KronicleHTTPErrorModel(status=404, error="Not found", message="role not found", url=route)
+            )
 
         monkeypatch.setattr(rbac, "delete", mock_delete)
-        role = rbac.delete_role(role_id=uuid4())
-        assert role is None
+        with pytest.raises(KronicleHTTPError):
+            rbac.delete_role(role_id=uuid4())
 
     def test_assign_role_to_user(self, rbac, monkeypatch):
         rid = uuid4()

@@ -30,7 +30,7 @@ class KronicleSetup(KronicleWriter):
         ``zone_id`` can be passed explicitly or extracted from the model's
         ``zone`` attribute.
         """
-        payload = self._ensure_body_as_payload(body)
+        payload = self._ensure_kronicle_channel(body)
         if not zone_id and isinstance(payload, KronicleChannel) and payload.zone:
             zone_id = payload.zone.id
         if not zone_id:

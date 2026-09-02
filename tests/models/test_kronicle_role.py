@@ -41,6 +41,15 @@ class TestKronicleRoleValidation:
         r = KronicleRole()
         assert r.name is None
 
+    def test_details_too_large(self):
+        with pytest.raises(ValueError, match="too large"):
+            KronicleRole(name="test.role", details={"big": "x" * (70 * 1024)})
+
+    def test_details_none_and_small_ok(self):
+        assert KronicleRole(name="test.role").details is None
+        r = KronicleRole(name="test.role", details={"env": "prod"})
+        assert r.details == {"env": "prod"}
+
 
 class TestKronicleRoleSerialization:
     def test_to_json_minimal(self):

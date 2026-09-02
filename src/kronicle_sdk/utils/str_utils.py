@@ -125,6 +125,67 @@ def strip_quotes(v: Any) -> Any:
     return v[1:-1] if isinstance(v, str) and len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'") else v
 
 
+SQL_COL_MAX_LEN = 63
+
+
+def split_strip(s: str, sep: str = ",", norm=None) -> list[str]:
+    """Split on sep, strip whitespace, and optionally normalize each part."""
+    if s is None:
+        return []
+    parts = [p.strip() for p in s.split(sep)]
+    if norm:
+        return [n for n in (norm(p) for p in parts) if n not in (None, "")]
+    return [p for p in parts if p]
+
+
+def normalize_name(
+    s: str,
+    *,
+    keep_dots: bool = False,
+    prefix: str = "",
+) -> str:
+    """Normalize a column name the same way kronicle's server does.
+
+    Raises ValueError for empty/invalid names. Dots are preserved when
+    keep_dots is True (used by `col`/`any` dotted filters).
+    """
+    if not isinstance(s, str):
+        raise TypeError("Name should be a string")
+    if s is None or len(s) < 1:
+        raise ValueError("Name cannot be empty")
+    try:
+        if keep_dots:
+            parts = split_strip(s, ".", normalize_name)
+            normed = ".".join(p for p in parts if p)
+        else:
+            normed = normalize_to_snake_case(s)
+        normed = sub(r"_+", "_", normed)
+        normed = normed.strip("_")
+        if len(normed) < 1:
+            raise ValueError("Name is invalid")
+        if normed[0].isdigit():
+            if not prefix:
+                raise ValueError("Name is invalid")
+            normed = prefix + normed
+        return normed[:SQL_COL_MAX_LEN]
+    except Exception as exc:
+        raise ValueError("Name is invalid") from exc
+
+
+def normalize_name_keep_dots(s: str, *, prefix: str = "") -> str:
+    return normalize_name(s, keep_dots=True, prefix=prefix)
+
+
+def normalize_sort_name(s: str, *, prefix: str = "") -> str:
+    s = s.strip()
+    if not s:
+        raise ValueError("Sort field cannot be empty")
+    if s[0] == "-":
+        normed = normalize_name(s[1:], prefix=prefix)
+        return f"-{normed}" if normed else ""
+    return normalize_name(s, prefix=prefix)
+
+
 def normalize_to_snake_case(s: str) -> str:
     return sub(r"[^\w]", "_", str(s).lower())
 

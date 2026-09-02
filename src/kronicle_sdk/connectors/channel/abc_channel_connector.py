@@ -8,6 +8,7 @@ from requests import Response, delete, get, patch, post, put
 
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
+from kronicle_sdk.models.data.row_filter import RowFilter
 from kronicle_sdk.models.kronicle_errors import KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
@@ -194,17 +195,23 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         return max_channel
 
     def get_rows_for_channel(
-        self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "list"
+        self,
+        id: UUID | str,
+        return_type: Literal["str", "dict", "list"] = "list",
+        filter: RowFilter | None = None,
     ) -> str | list[dict[str, Any]] | None:
         """
         Retrieve the rows of a channel in specified format.
 
         Args:
             return_type: 'dict' returns raw rows, 'str' returns string repr.
+            filter: optional RowFilter declaring sorting, pagination, column
+                selection and value filters to apply server-side.
         """
         here = "get_rows_for_chan"
         log_d(here, "id", id)
-        res = self.get(route=f"channels/{check_is_uuid4(id)}/rows")
+        params = filter.to_params() if filter else None
+        res = self.get(route=f"channels/{check_is_uuid4(id)}/rows", params=params)
         log_d(here, "res", res)
         payload = self._ensure_is_payload(res)
         log_d(here, "payload", payload)
@@ -215,14 +222,22 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
                 return payload.rows
         raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
-    def get_cols_for_channel(self, id: UUID | str, return_type: Literal["str", "dict", "list"] = "dict"):
+    def get_cols_for_channel(
+        self,
+        id: UUID | str,
+        return_type: Literal["str", "dict", "list"] = "dict",
+        filter: RowFilter | None = None,
+    ):
         """
         Retrieve the columns of a channel in specified format.
 
         Args:
             return_type: 'dict' returns raw columns, 'str' returns string repr.
+            filter: optional RowFilter declaring sorting, pagination, column
+                selection and value filters to apply server-side.
         """
-        result = self.get(route=f"channels/{check_is_uuid4(id)}/columns")
+        params = filter.to_params() if filter else None
+        result = self.get(route=f"channels/{check_is_uuid4(id)}/columns", params=params)
         assert isinstance(result, KronicleChannel)
 
         match return_type:

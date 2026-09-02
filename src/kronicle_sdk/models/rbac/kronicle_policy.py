@@ -39,7 +39,7 @@ class KroniclePolicy(KronicleRbacBase):
     @classmethod
     def _extract_self(cls, d: dict) -> dict:
         return {
-            "id": d["id"],
+            "id": d.get("id"),
             "name": d.get("name"),
             "details": d.get("details"),
             "description": d.get("description"),

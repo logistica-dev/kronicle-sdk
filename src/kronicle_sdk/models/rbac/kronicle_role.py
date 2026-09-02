@@ -5,7 +5,7 @@ from kronicle_sdk.models.rbac.permission_sets import PermStr
 
 
 class KronicleRole(KronicleRbacBase):
-    name: str  # type: ignore
+    # name: str  # type: ignore
     description: str | None = None
     permissions: list[str] | list[PermStr] | None = None
     restrictions: list[str] | list[PermStr] | None = None
