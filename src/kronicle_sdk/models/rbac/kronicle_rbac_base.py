@@ -6,9 +6,8 @@ from json import dumps
 from typing import Any, ClassVar, Self
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
-
 from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
+from pydantic import BaseModel, Field, field_validator
 
 T = TypeVar("T")
 

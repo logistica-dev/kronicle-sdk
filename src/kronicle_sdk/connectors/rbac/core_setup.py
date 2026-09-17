@@ -1,9 +1,11 @@
 # kronicle_sdk/connectors/rbac/core_setup.py
 from uuid import UUID
 
+from kronicle_sdk.connectors.abc_connector import KronicleHTTPError
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
+from kronicle_sdk.utils.log import log_i
 
 
 class KronicleCore(KronicleUsrLogin):
@@ -22,11 +24,31 @@ class KronicleCore(KronicleUsrLogin):
         zones = self.get(route="/zones")
         return [KronicleZone.from_json(z) for z in zones]
 
-    def get_zone_by_id(self, *, zone_id: UUID) -> KronicleZone | None:
-        res = self.get(route=f"/zones/{zone_id}")
+    def get_zone_by_id(self, zone_id: UUID) -> KronicleZone | None:
+        try:
+            existing = self.get(route=f"/zones/{zone_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleZone.from_json(existing) if existing else None
+
+    def get_zone_by_name(self, zone_name: str) -> KronicleZone | None:
+        res = self.get(route=f"/zones?name={zone_name}")
         return KronicleZone.from_json(res) if res else None
 
+    def get_zone(self, zone: KronicleZone) -> KronicleZone | None:
+        if zone.id and (existing := self.get_zone_by_id(zone.id)):
+            return existing
+        if zone.name:
+            return self.get_zone_by_name(zone.name)
+        return None
+
     def create_zone(self, zone: KronicleZone) -> KronicleZone:
+        here = "create_zone"
+        if existing_zone := self.get_zone(zone):
+            log_i(here, f"Zone {existing_zone.name} [{existing_zone.id}] already exist")
+            return existing_zone
         res = self.post(route="/zones", body=zone.to_json())
         return KronicleZone.from_json(res)
 
@@ -50,7 +72,8 @@ class KronicleCore(KronicleUsrLogin):
     def list_core_channels(self, *, zone_id: UUID | None = None) -> list[KronicleChannel]:
         if zone_id:
             channels = self.get(route=f"/zones/{zone_id}/channels")
-        channels = self.get(route="/channels")
+        else:
+            channels = self.get(route="/channels")
         return [KronicleChannel.from_json(c) for c in channels]
 
     def get_core_channel(self, *, channel_id: UUID) -> KronicleChannel | None:

@@ -1,8 +1,9 @@
 # kronicle/connectors/abc_connector.py
 import contextlib
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Generator
 from time import sleep
-from typing import Any, Callable, Generator
+from typing import Any
 
 from requests import Response, delete, get, patch, post, put
 
@@ -10,6 +11,7 @@ from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.kronicle_errors import (
     KronicleConnectionError,
     KronicleHTTPError,
+    KronicleOperationError,
     KronicleResponseError,
 )
 from kronicle_sdk.utils.log import log_d, log_e, log_w
@@ -69,8 +71,8 @@ class KronicleAbstractConnector(ABC):
             except (KronicleResponseError, KronicleHTTPError) as exc:
                 # Non-retriable: malformed response or HTTP error
                 log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
-                raise exc
-            except Exception as exc:
+                raise
+            except Exception as exc:  # noqa: BLE001
                 # retriable: network error, timeout, etc.
                 last_exc = exc
                 log_w(here, f"[attempt {attempt}] retriable exception", exc)
@@ -220,8 +222,17 @@ class KronicleAbstractConnector(ABC):
                 )
         return res
 
+    def _to_kronicle_channel(self, body: Any) -> KronicleChannel:
+        if isinstance(body, dict):
+            return KronicleChannel.from_json(body)
+        if isinstance(body, KronicleChannel):
+            return body
+        raise KronicleOperationError(f"Expected a KronicleChannel, got a {type(body).__name__}")
+
     def _ensure_kronicle_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
-        return body if isinstance(body, KronicleChannel) else KronicleChannel.from_json(body)
+        if isinstance(body, KronicleChannel):
+            return body
+        return KronicleChannel.from_json(body)
 
     def _ensure_payload_id(self, body: KronicleChannel | dict) -> str:
         here = "abc_connector._ensure_payload_id"

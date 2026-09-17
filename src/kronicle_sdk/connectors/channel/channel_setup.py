@@ -9,7 +9,7 @@ from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.kronicle_errors import KronicleOperationError
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_d, log_w
-from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
+from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
 class KronicleSetup(KronicleWriter):
@@ -24,34 +24,21 @@ class KronicleSetup(KronicleWriter):
     def column_types(self):
         return self.get(route="schemas/column_types", strict=False)
 
-    def create_channel(self, body: KronicleChannel | dict, *, zone_id: UUID | str | None = None):
-        """Creates a new channel in a zone and inserts data rows.
-
-        ``zone_id`` can be passed explicitly or extracted from the model's
-        ``zone`` attribute.
-        """
-        payload = self._ensure_kronicle_channel(body)
-        if not zone_id and isinstance(payload, KronicleChannel) and payload.zone:
-            zone_id = payload.zone.id
-        if not zone_id:
-            raise ValueError("zone_id is required to create a channel")
-        zone_id = ensure_uuid4(zone_id)
-        log_d("T create_channel", payload)
-        return self.post(route=f"zones/{zone_id}/channels", body=payload)
-
     def upsert_channel(self, body: KronicleChannel | dict):
         self._ensure_payload_id(body)
-        return self.put(route="channels", body=body)
+        existing = self.put(route="channels", body=body)
+        return self._to_kronicle_channel(existing)
 
     def update_channel(self, body: KronicleChannel | dict):
         channel_id = self._ensure_payload_id(body)
-        return self.patch(route=f"channels/{channel_id}", body=body)
+        existing = self.patch(route=f"channels/{channel_id}", body=body)
+        return self._to_kronicle_channel(existing)
 
-    def delete_channel(self, id: UUID | str):
-        channel: KronicleChannel | None = self.get_channel(id)
+    def delete_channel(self, id: UUID | str) -> KronicleChannel:
+        channel: KronicleChannel | None = self.get_channel_by_id(id)
         if not channel:
             raise KronicleOperationError(f"No channel found with id {id} on {self.url}")
-        return self.delete(route=f"channels/{channel.id}")
+        return self._to_kronicle_channel(self.delete(route=f"channels/{channel.id}"))
 
     def delete_all_channels(self):
         here = "delete_all_channels"
@@ -59,10 +46,10 @@ class KronicleSetup(KronicleWriter):
             try:
                 self.delete_channel(channel_id)
                 print(f"deleted channel {channel_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 log_w(here, f"Could not delete channel {channel_id}", e)
 
-    def clone_channel(self, src_id: UUID | str, *, body: KronicleChannel | dict | None = None):
+    def clone_channel(self, src_id: UUID | str, *, body: KronicleChannel | dict | None = None) -> KronicleChannel:
         if isinstance(src_id, str):
             src_id = UUID(src_id)
         if not body:
@@ -71,7 +58,8 @@ class KronicleSetup(KronicleWriter):
             body.id = src_id
         else:
             body = KronicleChannel(id=src_id, **body)
-        return self.post(route=f"channels/{src_id}/clone", body=body)
+        existing = self.post(route=f"channels/{src_id}/clone", body=body)
+        return self._to_kronicle_channel(existing)
 
 
 if __name__ == "__main__":  # pragma: no-cover
@@ -87,7 +75,7 @@ if __name__ == "__main__":  # pragma: no-cover
 
     max_chan = kronicle_setup.get_channel_with_max_rows()
     if max_chan and (max_chan_id := max_chan.id):
-        log_d(here, "channel with max rows", kronicle_setup.get_channel(max_chan_id))
+        log_d(here, "channel with max rows", kronicle_setup.get_channel_by_id(max_chan_id))
         rows: list = kronicle_setup.get_rows_for_channel(max_chan_id, "dict")  # type: ignore
         for i, row in enumerate(rows):
             log_d(here, f"row {i}", row)
@@ -121,7 +109,7 @@ if __name__ == "__main__":  # pragma: no-cover
     log_d(here, "column types", kronicle_setup.column_types)
     try:
         kronicle_setup.get(route="route/that/does/not/exist", strict=False)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log_w(here, "OK, exception caught:", e)
 
     core_setup.delete_zone(zone_id=zone_id)

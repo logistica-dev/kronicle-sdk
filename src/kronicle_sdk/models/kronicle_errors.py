@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel
 from requests import Response
 
-from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.log import log_d, log_e, log_w
 
 
 class KronicleError(Exception):
@@ -45,6 +45,38 @@ class KronicleHTTPError(KronicleError):
         self.model = model
         super().__init__(str(self))
 
+    @property
+    def status(self) -> int:
+        return self.model.status
+
+    @property
+    def error(self) -> str:
+        return self.model.error
+
+    @property
+    def message(self) -> str:
+        return self.model.message
+
+    @property
+    def details(self) -> Any:
+        return self.model.details
+
+    @property
+    def method(self) -> str | None:
+        return self.model.method
+
+    @property
+    def params(self) -> dict | None:
+        return self.model.params
+
+    @property
+    def url(self) -> str | None:
+        return self.model.url
+
+    @property
+    def request_id(self) -> str | None:
+        return self.model.request_id
+
     @classmethod
     def from_response(
         cls,
@@ -81,13 +113,13 @@ class KronicleHTTPError(KronicleError):
                             request_id=res.get("request_id"),
                         )
                     )
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    log_e(here, "to KronicleHTTPErrorModel", e)
             detail = res.get("detail")
             if detail:
-                message = (detail.get("message"),)
-                error = (detail.get("error"),)
-                details = (detail.get("details"),)
+                message = detail.get("message")
+                error = detail.get("error")
+                details = detail.get("details")
                 return cls(
                     KronicleHTTPErrorModel(
                         status=response.status_code or 400,
@@ -109,7 +141,7 @@ class KronicleHTTPError(KronicleError):
                         details=res.reason,
                     )
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             try:
                 details = response.reason
                 status = response.status_code or 400
@@ -122,7 +154,7 @@ class KronicleHTTPError(KronicleError):
                     details=response.reason,
                 )
                 return cls(err)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 response.raise_for_status()
                 return cls(
                     KronicleHTTPErrorModel(
@@ -157,7 +189,7 @@ class KronicleHTTPError(KronicleError):
                     details=res_json.get("detail") or res_json.get("details"),
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             response.raise_for_status()
             return cls(
                 KronicleHTTPErrorModel(

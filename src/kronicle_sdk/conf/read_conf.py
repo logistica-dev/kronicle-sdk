@@ -29,11 +29,18 @@ class ConnectionInformation:
     usr: str
     pwd: str
 
+    ssl: bool | None = None
+
+    @property
+    def _schema(self):
+        if self.ssl is None:
+            self.ssl = self.host not in ["localhost", "127.0.0.1"]
+        return f"http{'s' if self.ssl else ''}"
+
     @property
     def url(self):
-        ssl = self.host not in ["localhost", "127.0.0.1"]
         _port = f":{self.port}" if self.port else ""
-        return f"http{'s' if ssl else ''}://{self.host}{_port}"
+        return f"{self._schema}://{self.host}{_port}"
 
     @property
     def creds(self):

@@ -1,6 +1,7 @@
 # kronicle/connectors/channel/abc_channel_connector.py
 from abc import abstractmethod
-from typing import Any, Callable, Literal
+from collections.abc import Callable
+from typing import Any, Literal
 from urllib.parse import quote
 from uuid import UUID
 
@@ -9,7 +10,7 @@ from requests import Response, delete, get, patch, post, put
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.data.row_filter import RowFilter
-from kronicle_sdk.models.kronicle_errors import KronicleResponseError
+from kronicle_sdk.models.kronicle_errors import KronicleHTTPError, KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
 from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
 
@@ -153,11 +154,27 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         """Return all channel IDs for existing channels."""
         return [channel.id for channel in self.all_channels]
 
-    def get_channel(self, id: UUID | str) -> KronicleChannel | None:
-        """Retrieve a channel by its channel_id."""
-        return self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
+    def get_channel(self, channel: KronicleChannel) -> KronicleChannel | None:
+        """Retrieve a channel matching the input id or name, if it exists."""
+        if channel.id:
+            try:
+                existing = self.get_channel_by_id(channel.id)
+            except KronicleHTTPError as e:
+                if e.status != 404:
+                    raise
+                existing = None
+            if existing:
+                return existing
+        if channel.name and (existing := self.get_channel_by_name(channel.name)):
+            return existing
+        return None
 
-    def get_channel_with_name(self, channel_name):
+    def get_channel_by_id(self, id: UUID | str) -> KronicleChannel | None:
+        """Retrieve a channel by its channel_id."""
+        channel = self._ensure_is_payload_or_none(self.get(route=f"channels/{check_is_uuid4(id)}"))
+        return channel
+
+    def get_channel_by_name(self, channel_name):
         """
         Retrieve the first channel matching a channel_name.
 
@@ -165,7 +182,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             KronicleChannel if found, else None.
         """
         res = self.get(route=f"channels/?name={channel_name}", strict=None)
-        log_d("get_channel_with_name", res)
+        log_d("get_chan_by_name", res)
         return self._ensure_is_payload_or_none(res)
 
     def get_channel_with_tags(self, tags: dict[str, str]) -> list[KronicleChannel]:

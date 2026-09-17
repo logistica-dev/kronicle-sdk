@@ -97,7 +97,7 @@ def is_uuid_v4(id: str | UUID) -> bool:
         return False
 
 
-def check_is_uuid4(id: str | UUID) -> str:
+def check_is_uuid4(id: str | UUID | None) -> str:
     if id is None:
         raise ValueError("Input parameter should not be null")
     if not isinstance(id, (str, UUID)):

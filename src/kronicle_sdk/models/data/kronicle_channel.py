@@ -15,14 +15,13 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import field_validator, model_validator
-
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.dict_utils import remove_alt_field
 from kronicle_sdk.utils.str_utils import tiny_id, uuid_to_str
+from pydantic import field_validator, model_validator
 
 mod = "KronicleChannel"
 
@@ -104,7 +103,7 @@ class KronicleChannel(KronicleRbacBase):
                     invalid[col] = typ
                     continue
                 normalized[col] = kt.to_kronicle_type()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 invalid[col] = typ
 
         if invalid:
@@ -182,6 +181,8 @@ class KronicleChannel(KronicleRbacBase):
 
         if zone := d.get("zone"):
             d["zone"] = KronicleZone.from_json(zone)
+        elif zone_id := d.get("zone_id"):
+            d["zone"] = KronicleZone(id=zone_id)
 
         return cls.model_validate(d)
 

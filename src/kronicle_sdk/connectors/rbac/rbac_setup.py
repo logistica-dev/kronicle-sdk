@@ -4,6 +4,7 @@ from uuid import UUID
 
 from requests import put
 
+from kronicle_sdk.connectors.abc_connector import KronicleHTTPError
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.rbac.kronicle_access_profile import (
@@ -21,7 +22,7 @@ from kronicle_sdk.models.rbac.kronicle_policy import (
 )
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
-from kronicle_sdk.utils.log import log_d
+from kronicle_sdk.utils.log import log_d, log_i
 
 
 class KronicleRbac(KronicleUsrLogin):
@@ -40,23 +41,46 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/users?include_inactive=1" if include_inactive else "/users")
         return [KronicleUser.from_json(usr) for usr in res]
 
-    def get_user_by_id(self, *, user_id: UUID) -> KronicleUser | None:
-        res = self.get(route=f"/users/{user_id}")
+    def get_user_by_id(self, user_id: UUID) -> KronicleUser | None:
+        try:
+            res = self.get(route=f"/users/{user_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
         return KronicleUser.from_json(res) if res else None
 
-    def get_user_by_email(self, *, email: str) -> KronicleUser | None:
+    def get_user_by_email(self, email: str) -> KronicleUser | None:
         res = self.get(route=f"/users?email={email}")
         return KronicleUser.from_json(res) if res else None
 
-    def get_user_by_name(self, *, name: str) -> KronicleUser | None:
+    def get_user_by_name(self, name: str) -> KronicleUser | None:
         res = self.get(route=f"/users?name={name}")
         return KronicleUser.from_json(res) if res else None
 
-    def get_user_by_orcid(self, *, orcid: str) -> KronicleUser | None:
+    def get_user_by_orcid(self, orcid: str) -> KronicleUser | None:
         res = self.get(route=f"/users?orcid={orcid}")
         return KronicleUser.from_json(res) if res else None
 
+    def get_user(self, user: KronicleUser) -> KronicleUser | None:
+        if user.id and (existing := self.get_user_by_id(user_id=user.id)):
+            return existing
+        if user.email and (existing := self.get_user_by_email(email=user.email)):
+            return existing
+        if user.name and (existing := self.get_user_by_name(name=user.name)):
+            return existing
+        if user.orcid and (existing := self.get_user_by_orcid(orcid=user.orcid)):
+            return existing
+        return None
+
     def create_user(self, user: KronicleUser) -> KronicleUser:
+        here = "create_user"
+        if existing_user := self.get_user(user):
+            log_i(
+                here,
+                f"User {existing_user.name or existing_user.email} [{existing_user.id}] already exists",
+            )
+            return existing_user
         res = self.post(route="/users", body=user.model_dump())
         return KronicleUser.from_json(res)
 
@@ -80,15 +104,34 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/groups")
         return [KronicleGroup.from_json(r) for r in res]
 
-    def get_group_by_id(self, *, group_id: UUID) -> KronicleGroup:
-        res = self.get(route=f"/groups/{group_id}")
-        return KronicleGroup.from_json(res)
+    def get_group_by_id(self, group_id: UUID) -> KronicleGroup | None:
+        try:
+            res = self.get(route=f"/groups/{group_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleGroup.from_json(res) if res else None
 
-    def get_group_by_name(self, *, name: str) -> KronicleGroup:
+    def get_group_by_name(self, name: str) -> KronicleGroup | None:
         res = self.get(route=f"/groups?name={name}")
-        return KronicleGroup.from_json(res)
+        return KronicleGroup.from_json(res) if res else None
+
+    def get_group(self, group: KronicleGroup) -> KronicleGroup | None:
+        if group.id and (existing := self.get_group_by_id(group_id=group.id)):
+            return existing
+        if group.name and (existing := self.get_group_by_name(name=group.name)):
+            return existing
+        return None
 
     def create_group(self, group: KronicleGroup) -> KronicleGroup:
+        here = "create_group"
+        if existing_group := self.get_group(group):
+            log_i(
+                here,
+                f"Group {existing_group.name} [{existing_group.id}] already exists",
+            )
+            return existing_group
         res = self.post(route="/groups", body=group.model_dump())
         return KronicleGroup.from_json(res)
 
@@ -118,15 +161,31 @@ class KronicleRbac(KronicleUsrLogin):
         roles = self.get(route="/roles")
         return [KronicleRole.from_json(r) for r in roles]
 
-    def get_role_by_id(self, *, role_id: UUID) -> KronicleRole:
-        res = self.get(route=f"/roles/{role_id}")
-        return KronicleRole.from_json(res)
+    def get_role_by_id(self, role_id: UUID) -> KronicleRole | None:
+        try:
+            res = self.get(route=f"/roles/{role_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleRole.from_json(res) if res else None
 
-    def get_role_by_name(self, *, name: str) -> KronicleRole:
+    def get_role_by_name(self, name: str) -> KronicleRole | None:
         res = self.get(route=f"/roles?name={name}")
-        return KronicleRole.from_json(res)
+        return KronicleRole.from_json(res) if res else None
+
+    def get_role(self, role: KronicleRole) -> KronicleRole | None:
+        if role.id and (existing := self.get_role_by_id(role_id=role.id)):
+            return existing
+        if role.name and (existing := self.get_role_by_name(name=role.name)):
+            return existing
+        return None
 
     def create_role(self, role: KronicleRole) -> KronicleRole:
+        here = "create_role"
+        if existing_role := self.get_role(role):
+            log_i(here, f"Role {existing_role.name} [{existing_role.id}] already exists")
+            return existing_role
         res = self.post(route="/roles", body=role.model_dump())
         return KronicleRole.from_json(res)
 
@@ -243,7 +302,10 @@ class KronicleRbac(KronicleUsrLogin):
         return KronicleZoneAccess.from_json(res)
 
     def patch_zone_access_profile(self, access_profile: KronicleZoneAccess) -> KronicleZoneAccess:
-        res = self.patch(route=f"/access-profiles/zones/{access_profile.id}", body=access_profile.model_dump())
+        res = self.patch(
+            route=f"/access-profiles/zones/{access_profile.id}",
+            body=access_profile.model_dump(),
+        )
         return KronicleZoneAccess.from_json(res)
 
     def delete_zone_access_profile(self, *, profile_id: UUID) -> KronicleZoneAccess:
@@ -269,7 +331,10 @@ class KronicleRbac(KronicleUsrLogin):
         return KronicleChannelAccess.from_json(res)
 
     def patch_channel_access_profile(self, access_profile: KronicleChannelAccess) -> KronicleChannelAccess:
-        res = self.patch(route=f"/access-profiles/channels/{access_profile.id}", body=access_profile.model_dump())
+        res = self.patch(
+            route=f"/access-profiles/channels/{access_profile.id}",
+            body=access_profile.model_dump(),
+        )
         return KronicleChannelAccess.from_json(res)
 
     def delete_channel_access_profile(self, *, profile_id: UUID) -> KronicleChannelAccess:
@@ -294,7 +359,10 @@ class KronicleRbac(KronicleUsrLogin):
         return KronicleRowAccess.from_json(res)
 
     def patch_row_access_profile(self, access_profile: KronicleRowAccess) -> KronicleRowAccess:
-        res = self.patch(route=f"/access-profiles/rows/{access_profile.id}", body=access_profile.model_dump())
+        res = self.patch(
+            route=f"/access-profiles/rows/{access_profile.id}",
+            body=access_profile.model_dump(),
+        )
         return KronicleRowAccess.from_json(res)
 
     def delete_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
@@ -364,7 +432,10 @@ class KronicleRbac(KronicleUsrLogin):
         return KronicleChannelPolicy.from_json(res)
 
     def patch_channel_policy(self, channel_policy: KronicleChannelPolicy) -> KronicleChannelPolicy:
-        res = self.patch(route=f"/policies/channels/{channel_policy.id}", body=channel_policy.model_dump())
+        res = self.patch(
+            route=f"/policies/channels/{channel_policy.id}",
+            body=channel_policy.model_dump(),
+        )
         return KronicleChannelPolicy.from_json(res)
 
     # ----------------------------------------------------------------------------------------------
