@@ -385,18 +385,10 @@ class KronicleRbac(KronicleUsrLogin):
     # Policies
     # ----------------------------------------------------------------------------------------------
 
-    def list_policies(
-        self,
-    ) -> dict[str, list[KronicleZonePolicy | KronicleChannelPolicy | KronicleRowPolicy]]:
+    def list_policies(self) -> dict[str, list[dict[str, Any]]]:
+        """Return all policies across all resource types as flat summary dicts."""
         res = self.get(route="/policies")
-        return {
-            resource: [cls(**p) for p in res.get(resource, [])]
-            for resource, cls in (
-                ("zone", KronicleZonePolicy),
-                ("channel", KronicleChannelPolicy),
-                ("row", KronicleRowPolicy),
-            )
-        }
+        return {resource: [dict(p) for p in res.get(resource, [])] for resource in ("zone", "channel", "row")}
 
     # ----------------------------------------------------------------------------------------------
     # Zone Policies
