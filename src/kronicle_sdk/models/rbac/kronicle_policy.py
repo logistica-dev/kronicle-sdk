@@ -49,6 +49,11 @@ class KroniclePolicy(KronicleRbacBase):
             "subject": cls._extract_field(d, "subject", KronicleSubject),
         }
 
+    def _matches_subject(self, other: KroniclePolicy) -> bool:
+        return self.subject.type == other.subject.type and (self.subject.group_id or self.subject.user_id) == (
+            other.subject.group_id or other.subject.user_id
+        )
+
 
 class KronicleZonePolicy(KroniclePolicy):
     access_profile: KronicleZoneAccess  # type: ignore
@@ -58,6 +63,13 @@ class KronicleZonePolicy(KroniclePolicy):
         return KronicleZonePolicy(
             **cls._extract_self(d),
             access_profile=cls._extract_field(d, "access_profile", KronicleZoneAccess),
+        )
+
+    def matches(self, other: KronicleZonePolicy) -> bool:
+        return (
+            self._matches_subject(other)
+            and self.access_profile.role.id == other.access_profile.role.id
+            and self.access_profile.zone.id == other.access_profile.zone.id
         )
 
     def flatten(self) -> dict:
@@ -77,6 +89,13 @@ class KronicleChannelPolicy(KroniclePolicy):
             access_profile=cls._extract_field(d, "access_profile", KronicleChannelAccess),
         )
 
+    def matches(self, other: KronicleChannelPolicy) -> bool:
+        return (
+            self._matches_subject(other)
+            and self.access_profile.role.id == other.access_profile.role.id
+            and self.access_profile.channel.id == other.access_profile.channel.id
+        )
+
     def flatten(self) -> dict:
         d = self.model_dump()
         d["channel_id"] = uuid_to_str(self.access_profile.channel.id)
@@ -92,6 +111,13 @@ class KronicleRowPolicy(KroniclePolicy):
         return KronicleRowPolicy(
             **cls._extract_self(d),
             access_profile=cls._extract_field(d, "access_profile", KronicleRowAccess),
+        )
+
+    def matches(self, other: KronicleRowPolicy) -> bool:
+        return (
+            self._matches_subject(other)
+            and self.access_profile.role.id == other.access_profile.role.id
+            and self.access_profile.row.id == other.access_profile.row.id
         )
 
     def flatten(self) -> dict:

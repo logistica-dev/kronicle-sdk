@@ -98,7 +98,7 @@ class KronicleHTTPError(KronicleError):
             )
         try:
             res = response.json()
-            log_w(here, "res", res)
+            log_w(here, "response", res)
             if res.get("message"):
                 try:
                     return cls(

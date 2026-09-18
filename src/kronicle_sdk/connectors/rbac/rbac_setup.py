@@ -301,6 +301,10 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route=f"/access-profiles/zones/{profile_id}")
         return KronicleZoneAccess.from_json(res)
 
+    def get_zone_access_profile_by_name(self, *, name: str) -> KronicleZoneAccess | None:
+        res = self.get(route=f"/access-profiles/zones?name={name}")
+        return KronicleZoneAccess.from_json(res) if res else None
+
     def patch_zone_access_profile(self, access_profile: KronicleZoneAccess) -> KronicleZoneAccess:
         res = self.patch(
             route=f"/access-profiles/zones/{access_profile.id}",
@@ -330,6 +334,10 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route=f"/access-profiles/channels/{profile_id}")
         return KronicleChannelAccess.from_json(res)
 
+    def get_channel_access_profile_by_name(self, *, name: str) -> KronicleChannelAccess | None:
+        res = self.get(route=f"/access-profiles/channels?name={name}")
+        return KronicleChannelAccess.from_json(res) if res else None
+
     def patch_channel_access_profile(self, access_profile: KronicleChannelAccess) -> KronicleChannelAccess:
         res = self.patch(
             route=f"/access-profiles/channels/{access_profile.id}",
@@ -357,6 +365,10 @@ class KronicleRbac(KronicleUsrLogin):
     def get_row_access_profile(self, *, profile_id: UUID) -> KronicleRowAccess:
         res = self.get(route=f"/access-profiles/rows/{profile_id}")
         return KronicleRowAccess.from_json(res)
+
+    def get_row_access_profile_by_name(self, *, name: str) -> KronicleRowAccess | None:
+        res = self.get(route=f"/access-profiles/rows?name={name}")
+        return KronicleRowAccess.from_json(res) if res else None
 
     def patch_row_access_profile(self, access_profile: KronicleRowAccess) -> KronicleRowAccess:
         res = self.patch(
@@ -392,6 +404,14 @@ class KronicleRbac(KronicleUsrLogin):
 
     def create_zone_policy(self, zone_policy: KronicleZonePolicy) -> KronicleZonePolicy:
         log_d("create_zone_policy", zone_policy)
+        here = "create_zone_policy"
+        if existing := self.get_zone_policy(zone_policy):
+            log_i(
+                here,
+                f"Zone policy for {existing.subject.name or existing.subject.type} "
+                f"on zone {existing.access_profile.zone.name} already exists",
+            )
+            return existing
         res = self.post(route="/policies/zones", body=zone_policy.model_dump())
         return KronicleZonePolicy.from_json(res)
 
@@ -399,9 +419,28 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/policies/zones")
         return [KronicleZonePolicy.from_json(r) for r in res] if res else []
 
-    def get_zone_policy(self, *, policy_id: UUID) -> KronicleZonePolicy:
-        res = self.get(route=f"/policies/zones/{policy_id}")
-        return KronicleZonePolicy.from_json(res)
+    def get_zone_policy_by_id(self, *, policy_id: UUID) -> KronicleZonePolicy | None:
+        try:
+            res = self.get(route=f"/policies/zones/{policy_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleZonePolicy.from_json(res) if res else None
+
+    def get_zone_policy_by_name(self, *, name: str) -> KronicleZonePolicy | None:
+        res = self.get(route=f"/policies/zones?name={name}")
+        return KronicleZonePolicy.from_json(res) if res else None
+
+    def get_zone_policy(self, zone_policy: KronicleZonePolicy) -> KronicleZonePolicy | None:
+        if zone_policy.id and (existing := self.get_zone_policy_by_id(policy_id=zone_policy.id)):
+            return existing
+        if zone_policy.name and (existing := self.get_zone_policy_by_name(name=zone_policy.name)):
+            return existing
+        for existing in self.list_zone_policies():
+            if existing.matches(zone_policy):
+                return existing
+        return None
 
     def delete_zone_policy(self, *, policy_id: UUID) -> KronicleZonePolicy:
         res = self.delete(route=f"/policies/zones/{policy_id}")
@@ -416,6 +455,15 @@ class KronicleRbac(KronicleUsrLogin):
     # ----------------------------------------------------------------------------------------------
 
     def create_channel_policy(self, channel_policy: KronicleChannelPolicy) -> KronicleChannelPolicy:
+        log_d("create_channel_policy", channel_policy)
+        here = "create_channel_policy"
+        if existing := self.get_channel_policy(channel_policy):
+            log_i(
+                here,
+                f"Channel policy for {existing.subject.name or existing.subject.type} "
+                f"on channel {existing.access_profile.channel.name} already exists",
+            )
+            return existing
         res = self.post(route="/policies/channels", body=channel_policy.model_dump())
         return KronicleChannelPolicy.from_json(res)
 
@@ -423,9 +471,28 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/policies/channels")
         return [KronicleChannelPolicy.from_json(r) for r in res] if res else []
 
-    def get_channel_policy(self, *, policy_id: UUID) -> KronicleChannelPolicy:
-        res = self.get(route=f"/policies/channels/{policy_id}")
-        return KronicleChannelPolicy.from_json(res)
+    def get_channel_policy_by_id(self, *, policy_id: UUID) -> KronicleChannelPolicy | None:
+        try:
+            res = self.get(route=f"/policies/channels/{policy_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleChannelPolicy.from_json(res) if res else None
+
+    def get_channel_policy_by_name(self, *, name: str) -> KronicleChannelPolicy | None:
+        res = self.get(route=f"/policies/channels?name={name}")
+        return KronicleChannelPolicy.from_json(res) if res else None
+
+    def get_channel_policy(self, channel_policy: KronicleChannelPolicy) -> KronicleChannelPolicy | None:
+        if channel_policy.id and (existing := self.get_channel_policy_by_id(policy_id=channel_policy.id)):
+            return existing
+        if channel_policy.name and (existing := self.get_channel_policy_by_name(name=channel_policy.name)):
+            return existing
+        for existing in self.list_channel_policies():
+            if existing.matches(channel_policy):
+                return existing
+        return None
 
     def delete_channel_policy(self, *, policy_id: UUID) -> KronicleChannelPolicy:
         res = self.delete(route=f"/policies/channels/{policy_id}")
@@ -443,6 +510,15 @@ class KronicleRbac(KronicleUsrLogin):
     # ----------------------------------------------------------------------------------------------
 
     def create_row_policy(self, row_policy: KronicleRowPolicy) -> KronicleRowPolicy:
+        log_d("create_row_policy", row_policy)
+        here = "create_row_policy"
+        if existing := self.get_row_policy(row_policy):
+            log_i(
+                here,
+                f"Row policy for {existing.subject.name or existing.subject.type} "
+                f"on row {existing.access_profile.row.name} already exists",
+            )
+            return existing
         res = self.post(route="/policies/rows", body=row_policy.model_dump())
         return KronicleRowPolicy.from_json(res)
 
@@ -450,9 +526,28 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route="/policies/rows")
         return [KronicleRowPolicy.from_json(r) for r in res] if res else []
 
-    def get_row_policy(self, *, policy_id: UUID) -> KronicleRowPolicy:
-        res = self.get(route=f"/policies/rows/{policy_id}")
-        return KronicleRowPolicy.from_json(res)
+    def get_row_policy_by_id(self, *, policy_id: UUID) -> KronicleRowPolicy | None:
+        try:
+            res = self.get(route=f"/policies/rows/{policy_id}")
+        except KronicleHTTPError as e:
+            if e.status == 404:
+                return None
+            raise
+        return KronicleRowPolicy.from_json(res) if res else None
+
+    def get_row_policy_by_name(self, *, name: str) -> KronicleRowPolicy | None:
+        res = self.get(route=f"/policies/rows?name={name}")
+        return KronicleRowPolicy.from_json(res) if res else None
+
+    def get_row_policy(self, row_policy: KronicleRowPolicy) -> KronicleRowPolicy | None:
+        if row_policy.id and (existing := self.get_row_policy_by_id(policy_id=row_policy.id)):
+            return existing
+        if row_policy.name and (existing := self.get_row_policy_by_name(name=row_policy.name)):
+            return existing
+        for existing in self.list_row_policies():
+            if existing.matches(row_policy):
+                return existing
+        return None
 
     def delete_row_policy(self, *, policy_id: UUID) -> KronicleRowPolicy:
         res = self.delete(route=f"/policies/rows/{policy_id}")

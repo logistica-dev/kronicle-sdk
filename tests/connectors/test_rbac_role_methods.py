@@ -49,8 +49,7 @@ class TestKronicleRbacRoles:
             )
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        with pytest.raises(KronicleHTTPError):
-            rbac.get_role_by_id(role_id=uuid4())
+        assert rbac.get_role_by_id(role_id=uuid4()) is None
 
     def test_get_role_by_name_found(self, rbac, monkeypatch):
         fake = {"id": str(uuid4()), "name": "viewer", "permissions": ["channel:read"]}
@@ -83,7 +82,11 @@ class TestKronicleRbacRoles:
             assert body["name"] == "editor"
             return fake
 
+        def mock_get(*, route, **kw):
+            return None
+
         monkeypatch.setattr(rbac, "post", mock_post)
+        monkeypatch.setattr(rbac, "get", mock_get)
         role = rbac.create_role(KronicleRole(name="editor", permissions=["channel:write"]))
         assert role.name == "editor"
         assert role.id == rid
