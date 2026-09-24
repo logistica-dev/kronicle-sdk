@@ -5,11 +5,11 @@ repos:
     rev: 0.9.1
     hooks:
       - id: nbstripout
-  # - repo: https://github.com/charliermarsh/ruff-pre-commit
-  #   rev: v0.14.6
-  #   hooks:
-  #     - id: ruff
-  #       args: [--fix] # auto-fix issues
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.14.6
+    hooks:
+      - id: ruff
+        args: [--fix] # auto-fix issues
   - repo: https://github.com/ambv/black
     rev: 26.5.1
     hooks:

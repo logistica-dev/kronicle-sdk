@@ -40,7 +40,7 @@ class RowFilter(BaseModel):
     offset: int | None = Field(default=None, ge=0, description="Number of rows to skip (pagination)")
     sort: list[str] | str | None = Field(
         default=None,
-        description="Sort columns; prefix with '-' for descending order. " "May be a list or a comma-separated string.",
+        description="Sort columns; prefix with '-' for descending order. May be a list or a comma-separated string.",
     )
 
     columns: list[str] | str | None = Field(
@@ -130,7 +130,7 @@ class RowFilter(BaseModel):
     def model_dump(self, *args, exclude_none=True, **kwargs) -> dict:
         return super().model_dump(*args, exclude_none=exclude_none, **kwargs)
 
-    def to_params(self) -> dict[str, Any]:
+    def to_params(self) -> dict[str, Any]:  # noqa: C901
         """Return a `requests`-compatible query-parameters dict.
 
         Only set fields are included. Bracket keys (e.g. ``col[name]``) are

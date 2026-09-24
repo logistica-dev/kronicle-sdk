@@ -3,6 +3,8 @@ from collections.abc import Callable
 from json import loads
 from typing import Any
 
+from requests import Response, post
+
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
 from kronicle_sdk.models.iso_datetime import IsoDateTime
@@ -11,7 +13,6 @@ from kronicle_sdk.models.kronicle_errors import (
 )
 from kronicle_sdk.utils.log import log_d, log_e
 from kronicle_sdk.utils.str_utils import decode_b64url, slash_join
-from requests import Response, post
 
 
 class KronicleUsrLogin(KronicleAbstractConnector):

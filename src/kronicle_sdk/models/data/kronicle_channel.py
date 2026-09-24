@@ -15,13 +15,14 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import field_validator, model_validator
+
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.dict_utils import remove_alt_field
 from kronicle_sdk.utils.str_utils import tiny_id, uuid_to_str
-from pydantic import field_validator, model_validator
 
 mod = "KronicleChannel"
 
@@ -214,7 +215,7 @@ class KronicleChannel(KronicleRbacBase):
 
     def __str__(self) -> str:
         """Convert to a (JSON) string"""
-        return self.model_dump_json(indent=2, exclude_none=True)
+        return self.model_dump_json(exclude_none=True)
 
     # ----------------------------------------------------------------------------------------------
     # Data helpers

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pydantic import BaseModel, Field
+
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_policy import (
     KronicleChannelPolicy,
@@ -8,7 +10,6 @@ from kronicle_sdk.models.rbac.kronicle_policy import (
 )
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
-from pydantic import BaseModel, Field
 
 
 class KronicleGroupRole(BaseModel):
