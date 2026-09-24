@@ -5,6 +5,8 @@ from typing import Any, Literal
 from urllib.parse import quote
 from uuid import UUID
 
+from requests import Response, delete, get, patch, post, put
+
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.data.row_filter import RowFilter
@@ -16,7 +18,6 @@ from kronicle_sdk.utils.str_utils import (
     normalize_column_name,
     normalize_to_snake_case,
 )
-from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):

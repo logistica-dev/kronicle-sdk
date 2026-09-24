@@ -2,6 +2,8 @@
 from typing import Any
 from uuid import UUID
 
+from requests import put
+
 from kronicle_sdk.connectors.abc_connector import KronicleHTTPError
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
@@ -21,7 +23,6 @@ from kronicle_sdk.models.rbac.kronicle_policy import (
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 from kronicle_sdk.utils.log import log_d, log_i
-from requests import put
 
 
 class KronicleRbac(KronicleUsrLogin):
