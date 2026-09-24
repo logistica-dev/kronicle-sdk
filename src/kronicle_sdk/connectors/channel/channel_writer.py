@@ -31,6 +31,8 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         ``zone_id`` can be passed explicitly or extracted from the model's
         ``zone`` attribute.
         """
+        here = "create_channel"
+        # log_d(here)
         payload = self._ensure_kronicle_channel(body)
         if not zone_id and payload.zone:
             zone_id = payload.zone.id
@@ -39,7 +41,6 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         zone_id = ensure_uuid4(zone_id)
         # log_d("T create_channel", payload)
         if existing := self.get_channel(payload):
-            here = "create_channel"
             if existing.zone and existing.zone.id == zone_id:
                 log_i(here, f"Channel {existing.name} [{existing.id}] already exists")
                 return existing

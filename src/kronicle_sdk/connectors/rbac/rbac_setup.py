@@ -2,8 +2,6 @@
 from typing import Any
 from uuid import UUID
 
-from requests import put
-
 from kronicle_sdk.connectors.abc_connector import KronicleHTTPError
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
@@ -23,6 +21,7 @@ from kronicle_sdk.models.rbac.kronicle_policy import (
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
 from kronicle_sdk.utils.log import log_d, log_i
+from requests import put
 
 
 class KronicleRbac(KronicleUsrLogin):
@@ -106,16 +105,16 @@ class KronicleRbac(KronicleUsrLogin):
 
     def get_group_by_id(self, group_id: UUID) -> KronicleGroup | None:
         try:
-            res = self.get(route=f"/groups/{group_id}")
+            existing = self.get(route=f"/groups/{group_id}")
         except KronicleHTTPError as e:
             if e.status == 404:
                 return None
             raise
-        return KronicleGroup.from_json(res) if res else None
+        return KronicleGroup.from_json(existing) if existing else None
 
     def get_group_by_name(self, name: str) -> KronicleGroup | None:
-        res = self.get(route=f"/groups?name={name}")
-        return KronicleGroup.from_json(res) if res else None
+        existing = self.get(route=f"/groups?name={name}")
+        return KronicleGroup.from_json(existing) if existing else None
 
     def get_group(self, group: KronicleGroup) -> KronicleGroup | None:
         if group.id and (existing := self.get_group_by_id(group_id=group.id)):
@@ -126,22 +125,29 @@ class KronicleRbac(KronicleUsrLogin):
 
     def create_group(self, group: KronicleGroup) -> KronicleGroup:
         here = "create_group"
-        if existing_group := self.get_group(group):
+        if existing := self.get_group(group):
             log_i(
                 here,
-                f"Group {existing_group.name} [{existing_group.id}] already exists",
+                f"Group {existing.name} [{existing.id}] already exists",
             )
-            return existing_group
-        res = self.post(route="/groups", body=group.model_dump())
-        return KronicleGroup.from_json(res)
+            return existing
+        created = self.post(route="/groups", body=group.model_dump())
+        return KronicleGroup.from_json(created)
 
     def patch_group(self, group: KronicleGroup) -> KronicleGroup:
-        res = self.patch(route=f"/groups/{group.id}", body=group.model_dump())
-        return KronicleGroup.from_json(res)
+        patched = self.patch(route=f"/groups/{group.id}", body=group.model_dump())
+        return KronicleGroup.from_json(patched)
 
     def delete_group(self, *, group_id: UUID, force: bool = False) -> KronicleGroup:
-        res = self.delete(route=f"/groups/{group_id}?force=true" if force else f"/groups/{group_id}")
-        return KronicleGroup.from_json(res)
+        deleted = self.delete(route=f"/groups/{group_id}?force=true" if force else f"/groups/{group_id}")
+        return KronicleGroup.from_json(deleted)
+
+    def delete_group_with_name(self, name: str, *, force: bool = False) -> KronicleGroup | None:
+        grp = self.get_group_by_name(name)
+        if grp is None:
+            return None
+        deleted = self.delete(route=f"/groups/{grp.id}?force=true" if force else f"/groups/{grp.id}")
+        return KronicleGroup.from_json(deleted)
 
     def get_users_from_group(self, *, group_id: UUID) -> list[KronicleUser]:
         res = self.get(route=f"/groups/{group_id}/users")
@@ -183,20 +189,26 @@ class KronicleRbac(KronicleUsrLogin):
 
     def create_role(self, role: KronicleRole) -> KronicleRole:
         here = "create_role"
-        if existing_role := self.get_role(role):
-            log_i(here, f"Role {existing_role.name} [{existing_role.id}] already exists")
-            return existing_role
-        res = self.post(route="/roles", body=role.model_dump())
-        return KronicleRole.from_json(res)
+        if existing := self.get_role(role):
+            log_i(here, f"Role {existing.name} [{existing.id}] already exists")
+            return existing
+        created = self.post(route="/roles", body=role.model_dump())
+        return KronicleRole.from_json(created)
 
     def patch_role(self, role: KronicleRole) -> KronicleRole:
-        res = self.patch(route=f"/roles/{role.id}", body=role.model_dump())
-        return KronicleRole.from_json(res)
+        patched = self.patch(route=f"/roles/{role.id}", body=role.model_dump())
+        return KronicleRole.from_json(patched)
 
     def delete_role(self, *, role_id: UUID, force: bool = False) -> KronicleRole:
-        route = f"/roles/{role_id}?force=true" if force else f"/roles/{role_id}"
-        res = self.delete(route=route)
-        return KronicleRole.from_json(res)
+        deleted = self.delete(route=f"/roles/{role_id}{'?force=true' if force else ''}")
+        return KronicleRole.from_json(deleted)
+
+    def delete_role_with_name(self, name: str, *, force: bool = False) -> KronicleRole | None:
+        role = self.get_role_by_name(name)
+        if role is None:
+            return None
+        deleted = self.delete(route=f"/roles/{role.id}{'?force=true' if force else ''}")
+        return KronicleRole.from_json(deleted)
 
     def put(
         self,
@@ -252,6 +264,11 @@ class KronicleRbac(KronicleUsrLogin):
         params = {"indirect": "1"} if indirect else None
         return self.get(route=f"/users/{user_id}/groups/{group_id}", params=params)
 
+    def get_groups_for_user(self, *, user_id: UUID, indirect: bool = False) -> list[KronicleGroup]:
+        params = {"indirect": "1"} if indirect else None
+        groups = self.get(route=f"/users/{user_id}/groups", params=params)
+        return [KronicleGroup.from_json(g) for g in groups]
+
     # ----------------------------------------------------------------------------------------------
     # Introspection: permissions
     # ----------------------------------------------------------------------------------------------
@@ -301,7 +318,7 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route=f"/access-profiles/zones/{profile_id}")
         return KronicleZoneAccess.from_json(res)
 
-    def get_zone_access_profile_by_name(self, *, name: str) -> KronicleZoneAccess | None:
+    def get_zone_access_profile_by_name(self, name: str) -> KronicleZoneAccess | None:
         res = self.get(route=f"/access-profiles/zones?name={name}")
         return KronicleZoneAccess.from_json(res) if res else None
 
@@ -334,7 +351,7 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route=f"/access-profiles/channels/{profile_id}")
         return KronicleChannelAccess.from_json(res)
 
-    def get_channel_access_profile_by_name(self, *, name: str) -> KronicleChannelAccess | None:
+    def get_channel_access_profile_by_name(self, name: str) -> KronicleChannelAccess | None:
         res = self.get(route=f"/access-profiles/channels?name={name}")
         return KronicleChannelAccess.from_json(res) if res else None
 
@@ -366,7 +383,7 @@ class KronicleRbac(KronicleUsrLogin):
         res = self.get(route=f"/access-profiles/rows/{profile_id}")
         return KronicleRowAccess.from_json(res)
 
-    def get_row_access_profile_by_name(self, *, name: str) -> KronicleRowAccess | None:
+    def get_row_access_profile_by_name(self, name: str) -> KronicleRowAccess | None:
         res = self.get(route=f"/access-profiles/rows?name={name}")
         return KronicleRowAccess.from_json(res) if res else None
 
@@ -420,7 +437,7 @@ class KronicleRbac(KronicleUsrLogin):
             raise
         return KronicleZonePolicy.from_json(res) if res else None
 
-    def get_zone_policy_by_name(self, *, name: str) -> KronicleZonePolicy | None:
+    def get_zone_policy_by_name(self, name: str) -> KronicleZonePolicy | None:
         res = self.get(route=f"/policies/zones?name={name}")
         return KronicleZonePolicy.from_json(res) if res else None
 
@@ -472,7 +489,7 @@ class KronicleRbac(KronicleUsrLogin):
             raise
         return KronicleChannelPolicy.from_json(res) if res else None
 
-    def get_channel_policy_by_name(self, *, name: str) -> KronicleChannelPolicy | None:
+    def get_channel_policy_by_name(self, name: str) -> KronicleChannelPolicy | None:
         res = self.get(route=f"/policies/channels?name={name}")
         return KronicleChannelPolicy.from_json(res) if res else None
 
@@ -527,7 +544,7 @@ class KronicleRbac(KronicleUsrLogin):
             raise
         return KronicleRowPolicy.from_json(res) if res else None
 
-    def get_row_policy_by_name(self, *, name: str) -> KronicleRowPolicy | None:
+    def get_row_policy_by_name(self, name: str) -> KronicleRowPolicy | None:
         res = self.get(route=f"/policies/rows?name={name}")
         return KronicleRowPolicy.from_json(res) if res else None
 

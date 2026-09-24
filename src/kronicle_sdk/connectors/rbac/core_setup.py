@@ -33,9 +33,9 @@ class KronicleCore(KronicleUsrLogin):
             raise
         return KronicleZone.from_json(existing) if existing else None
 
-    def get_zone_by_name(self, zone_name: str) -> KronicleZone | None:
-        res = self.get(route=f"/zones?name={zone_name}")
-        return KronicleZone.from_json(res) if res else None
+    def get_zone_by_name(self, name: str) -> KronicleZone | None:
+        existing = self.get(route=f"/zones?name={name}")
+        return KronicleZone.from_json(existing) if existing else None
 
     def get_zone(self, zone: KronicleZone) -> KronicleZone | None:
         if zone.id and (existing := self.get_zone_by_id(zone.id)):
@@ -49,8 +49,8 @@ class KronicleCore(KronicleUsrLogin):
         if existing_zone := self.get_zone(zone):
             log_i(here, f"Zone {existing_zone.name} [{existing_zone.id}] already exist")
             return existing_zone
-        res = self.post(route="/zones", body=zone.to_json())
-        return KronicleZone.from_json(res)
+        created = self.post(route="/zones", body=zone.to_json())
+        return KronicleZone.from_json(created)
 
     def patch_zone(self, zone: KronicleZone) -> KronicleZone:
         body = {}
@@ -58,12 +58,19 @@ class KronicleCore(KronicleUsrLogin):
             body["name"] = zone.name
         if zone.details is not None:
             body["details"] = zone.details
-        res = self.patch(route=f"/zones/{zone.id}", body=body)
-        return KronicleZone.from_json(res)
+        patched = self.patch(route=f"/zones/{zone.id}", body=body)
+        return KronicleZone.from_json(patched)
 
     def delete_zone(self, *, zone_id: UUID) -> KronicleZone | None:
-        res = self.delete(route=f"/zones/{zone_id}")
-        return KronicleZone.from_json(res) if res else None
+        deleted = self.delete(route=f"/zones/{zone_id}")
+        return KronicleZone.from_json(deleted) if deleted else None
+
+    def delete_zone_by_name(self, name: str) -> KronicleZone | None:
+        zone = self.get_zone_by_name(name)
+        if zone is None:
+            return None
+        deleted = self.delete(route=f"/zones/{zone.id}")
+        return KronicleZone.from_json(deleted) if deleted else None
 
     # ----------------------------------------------------------------------------------------------
     # Core Channels

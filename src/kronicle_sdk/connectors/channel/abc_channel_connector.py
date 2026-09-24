@@ -5,14 +5,18 @@ from typing import Any, Literal
 from urllib.parse import quote
 from uuid import UUID
 
-from requests import Response, delete, get, patch, post, put
-
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.data.row_filter import RowFilter
 from kronicle_sdk.models.kronicle_errors import KronicleHTTPError, KronicleResponseError
 from kronicle_sdk.utils.log import log_d, log_w
-from kronicle_sdk.utils.str_utils import check_is_uuid4, get_type, normalize_column_name
+from kronicle_sdk.utils.str_utils import (
+    check_is_uuid4,
+    get_type,
+    normalize_column_name,
+    normalize_to_snake_case,
+)
+from requests import Response, delete, get, patch, post, put
 
 
 class KronicleAbstractChannelConnector(KronicleUsrLogin):
@@ -156,17 +160,21 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
 
     def get_channel(self, channel: KronicleChannel) -> KronicleChannel | None:
         """Retrieve a channel matching the input id or name, if it exists."""
+        here = "get_channel"
+        log_d(here)
         if channel.id:
             try:
-                existing = self.get_channel_by_id(channel.id)
+                if existing := self.get_channel_by_id(channel.id):
+                    log_d(here, "by_id", existing)
+                    return existing
             except KronicleHTTPError as e:
                 if e.status != 404:
                     raise
-                existing = None
-            if existing:
+            log_d(here, f"Channel '{channel.id}' not found")
+        if channel.name:
+            if existing := self.get_channel_by_name(channel.name):
                 return existing
-        if channel.name and (existing := self.get_channel_by_name(channel.name)):
-            return existing
+            log_d(here, f"Channel '{channel.name}' not found")
         return None
 
     def get_channel_by_id(self, id: UUID | str) -> KronicleChannel | None:
@@ -181,7 +189,13 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         Returns:
             KronicleChannel if found, else None.
         """
-        res = self.get(route=f"channels/?name={channel_name}", strict=None)
+        here = "get_chan_by_name"
+        norm_name = normalize_to_snake_case(channel_name)
+        log_d(
+            here,
+            f"Looking for channel '{channel_name}' (normalized as '{norm_name}')",
+        )
+        res = self.get(route=f"channels/?name={norm_name}", strict=None)
         log_d("get_chan_by_name", res)
         return self._ensure_is_payload_or_none(res)
 

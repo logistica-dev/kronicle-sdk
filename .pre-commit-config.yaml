@@ -42,7 +42,7 @@ repos:
   #       pass_filenames: false
   #       always_run: true
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.18.0
+    rev: v4.18.1
     hooks:
       - id: commitizen
       - id: commitizen-branch
