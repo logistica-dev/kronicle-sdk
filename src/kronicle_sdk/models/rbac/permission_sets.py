@@ -9,17 +9,22 @@ class PermStr(StrEnum):
     USER_UPDATE = "user:update"
     USER_DELETE = "user:delete"
 
+    GROUP_CREATE = "group:create"
+    GROUP_READ = "group:read"
+    GROUP_UPDATE = "group:update"
+    GROUP_DELETE = "group:delete"
+    GROUP_ASSIGN = "group:assign"
+
     ROLE_CREATE = "role:create"
     ROLE_READ = "role:read"
     ROLE_UPDATE = "role:update"
     ROLE_DELETE = "role:delete"
     ROLE_ASSIGN = "role:assign"
 
-    GROUP_CREATE = "group:create"
-    GROUP_READ = "group:read"
-    GROUP_UPDATE = "group:update"
-    GROUP_DELETE = "group:delete"
-    GROUP_ASSIGN = "group:assign"
+    POLICY_CREATE = "policy:create"
+    POLICY_READ = "policy:read"
+    POLICY_UPDATE = "policy:update"
+    POLICY_DELETE = "policy:delete"
 
     ZONE_CREATE = "zone:create"
     ZONE_READ = "zone:read"
@@ -32,15 +37,14 @@ class PermStr(StrEnum):
     CHANNEL_DELETE = "channel:delete"
     CHANNEL_SYNC = "channel:sync"
 
-    POLICY_CREATE = "policy:create"
-    POLICY_READ = "policy:read"
-    POLICY_DELETE = "policy:delete"
-
     ROW_READ = "row:read"
     ROW_CREATE = "row:create"
+    ROW_UPDATE = "row:update"
     ROW_DELETE = "row:delete"
 
     RBAC_ACCESS = "rbac:access"
+    RBAC_READ = "rbac:read"
+    RBAC_DELEGATE = "rbac:delegate"
     DATA_ACCESS = "data:access"
     SETUP_ACCESS = "setup:access"
 
@@ -156,12 +160,24 @@ DEFAULT_ROLES: list[dict] = [
         "description": "Read data from channels and rows",
         "permissions": PERMISSION_SET_DATA_READER,
     },
-    {"name": "data_writer", "description": "Write data to channels", "permissions": PERMISSION_SET_DATA_WRITER},
+    {
+        "name": "data_writer",
+        "description": "Write data to channels",
+        "permissions": PERMISSION_SET_DATA_WRITER,
+    },
     {
         "name": "channel_admin",
         "description": "Create, update, and delete channels",
         "permissions": PERMISSION_SET_CHANNEL_ADMIN,
     },
-    {"name": "zone_admin", "description": "Create, update, and delete zones", "permissions": PERMISSION_SET_ZONE_ADMIN},
-    {"name": "auditor", "description": "Read-only access to all resources", "permissions": PERMISSION_SET_AUDITOR},
+    {
+        "name": "zone_admin",
+        "description": "Create, update, and delete zones",
+        "permissions": PERMISSION_SET_ZONE_ADMIN,
+    },
+    {
+        "name": "auditor",
+        "description": "Read-only access to all resources",
+        "permissions": PERMISSION_SET_AUDITOR,
+    },
 ]

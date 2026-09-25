@@ -9,6 +9,7 @@ from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.abc_connector import KronicleAbstractConnector
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.kronicle_errors import (
+    KronicleConnectionError,
     KronicleResponseError,
 )
 from kronicle_sdk.utils.log import log_d, log_e
@@ -47,9 +48,9 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         )
         try:
             data = KronicleUsrLogin._parse(self, response=res, strict=False)
-        except Exception:
-            log_e(here, "Failed to get a JWT")
-            raise
+        except Exception as e:
+            log_e(here, "Failed to get a JWT, check your credentials and the connection")
+            raise KronicleConnectionError("Failed to get a JWT, check your credentials and the connection") from e
         return self._renew_jwt_from_res(data)
 
     def _renew_jwt_from_res(self, res_json: dict) -> str:
