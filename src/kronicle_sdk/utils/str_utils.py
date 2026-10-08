@@ -128,7 +128,7 @@ def strip_quotes(v: Any) -> Any:
 SQL_COL_MAX_LEN = 63
 
 
-def split_strip(s: str, sep: str = ",", norm=None) -> list[str]:
+def split_strip(s: str | None = None, sep: str = ",", norm=None) -> list[str]:
     """Split on sep, strip whitespace, and optionally normalize each part."""
     if s is None:
         return []
@@ -191,19 +191,18 @@ def normalize_to_snake_case(s: str) -> str:
 
 
 def normalize_column_name(s: str) -> str:
+    if not s:
+        # Generate 8-character random name
+        return "col_" + "".join(choices(ascii_lowercase + digits, k=8))  # nosec B311 - not used for security
     # Basic normalization
     s = normalize_to_snake_case(s)
     # Optionally: collapse multiple underscores
     s = sub(r"_+", "_", s)
     # Strip leading/trailing underscores
     s = s.strip("_")
-
     if s[0].isdigit():
         # Prefix if starting with digit
         s = "col_" + s
-    elif not s:
-        # Generate 8-character random name
-        s = "col_" + "".join(choices(ascii_lowercase + digits, k=8))  # nosec B311 - used for generating names in tests
     return s
 
 
@@ -263,7 +262,7 @@ def param_dict_to_str(params: dict | None = None) -> str:
     return "?" + ("&".join([f"{k}={v}" for k, v in params.items()]))
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     here = "str_utils"
     print(here, "strip_quotes 'toto':", strip_quotes("'toto'"))
     print(here, 'strip_quotes "toto":', strip_quotes('"toto"'))

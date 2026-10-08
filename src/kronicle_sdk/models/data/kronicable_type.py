@@ -237,7 +237,7 @@ class KronicableTypeChecker:
 # --------------------------------------------------------------------------------------------------
 # Example usage
 # --------------------------------------------------------------------------------------------------
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     from typing import Optional
 
     here = "test"

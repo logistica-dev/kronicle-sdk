@@ -22,7 +22,7 @@ class KronicleRow(KronicleRbacBase):
         raise ValueError("row id must be an integer")
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     from kronicle_sdk.utils.log import log_d
 
     here = "kron_zone.tests"

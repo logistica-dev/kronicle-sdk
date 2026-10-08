@@ -154,7 +154,7 @@ def now_utc():
 # ----------------------------------------------------------------------
 # Main test
 # ----------------------------------------------------------------------
-if __name__ == "__main__":  # nosec
+if __name__ == "__main__":  # pragma: no cover
     here = "iso_datetime.test"
     from time import sleep
 

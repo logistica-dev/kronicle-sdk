@@ -120,7 +120,7 @@ class KronicableSample(BaseModel):
 # ------------------------------------------------------------
 # Example usage
 # ------------------------------------------------------------
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     from kronicle_sdk.utils.log import log_d
 
     here = "KronSampl.tests"

@@ -62,7 +62,7 @@ class KronicleSetup(KronicleWriter):
         return self._to_kronicle_channel(existing)
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     from kronicle_sdk.utils.log import log_d
 
     here = "ksetup"

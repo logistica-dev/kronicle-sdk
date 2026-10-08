@@ -109,5 +109,5 @@ class KronicableFlatSample(KronicableSample):
         return row
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     pass

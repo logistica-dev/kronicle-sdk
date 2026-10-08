@@ -51,7 +51,7 @@ class DateGenerator:
         self.current = start
         self.increment = increment if isinstance(increment, timedelta) else timedelta(seconds=increment or 1)
 
-        self.jitter_percent = jitter_percent or 0.1
+        self.jitter_percent = 0.1 if jitter_percent is None else jitter_percent
         self.jitter = self.jitter_percent * self.increment
 
     # --------------------------------------------------------
@@ -104,7 +104,7 @@ class DateGenerator:
 # ----------------------------------------------------------------------
 # Main test
 # ----------------------------------------------------------------------
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     here = "dategen.test"
     date_gen = DateGenerator(start="2025", increment=36000, jitter_percent=0.3)
     log_d(here, date_gen.get())

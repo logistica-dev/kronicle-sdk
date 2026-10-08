@@ -280,7 +280,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         raise ValueError(f"Unexpected value for return_type parameter : {return_type}")
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     here = "abstract Kronicle connector"
     log_d(here)
     try:

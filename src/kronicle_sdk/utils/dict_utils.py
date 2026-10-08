@@ -51,7 +51,7 @@ def remove_alt_field(d: dict, keep: str, alt: str):
         d.setdefault(keep, d.pop(alt))
 
 
-if __name__ == "__main__":  # pragma: no-cover
+if __name__ == "__main__":  # pragma: no cover
     here = "dict_utils.tests"
     print(here, "strip_nulls list:", strip_nulls([3, 0, 5, None]))
     print(
