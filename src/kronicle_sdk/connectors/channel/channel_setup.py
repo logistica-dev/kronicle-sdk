@@ -8,7 +8,7 @@ from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.kronicle_errors import KronicleOperationError
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
-from kronicle_sdk.utils.log import log_d, log_w
+from kronicle_sdk.utils.log import log_w
 from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 

@@ -1,20 +1,35 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+# Linters run from the project venv (single version source via [dependency-groups]):
+#   uv sync && uv run pre-commit run --all-files
 repos:
   - repo: https://github.com/kynan/nbstripout
     rev: 0.9.1
     hooks:
       - id: nbstripout
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.14.6
+  - repo: local
     hooks:
       - id: ruff
-        args: [--fix] # auto-fix issues
-  - repo: https://github.com/ambv/black
-    rev: 26.5.1
-    hooks:
+        name: ruff
+        entry: ruff check --fix # auto-fix issues
+        language: system
+        types: [python]
       - id: black
-        language_version: python3.12
+        name: black
+        entry: black
+        language: system
+        types: [python]
+      - id: bandit
+        name: bandit
+        entry: bandit -c pyproject.toml -r src
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: commitizen-message
+        name: commitizen message check
+        entry: cz check --commit-msg-file
+        language: system
+        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -29,21 +44,4 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
-  # - repo: https://github.com/RobertCraigie/pyright-python
-  #   rev: v1.1.367
-  #   hooks:
-  #     - id: pyright
-  # - repo: local
-  #   hooks:
-  #     - id: pytest-check
-  #       name: pytest-check
-  #       entry: pytest
-  #       language: system
-  #       pass_filenames: false
-  #       always_run: true
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.18.1
-    hooks:
-      - id: commitizen
-      - id: commitizen-branch
-        stages: [pre-push]
+  # NOTE: commitizen-branch (pre-push version bump) removed — uv-bump now owns versioning.
