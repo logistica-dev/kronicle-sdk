@@ -13,7 +13,6 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from pydantic import field_validator, model_validator
 
@@ -204,7 +203,7 @@ class KronicleChannel(KronicleRbacBase):
         if not flatten:
             return d
         if self.zone:
-            d["zone_id"] = uuid_to_str(self.zone.id)
+            d["zone_id"] = uuid_to_str(self.zone.ensure_has_id())
             d["zone_name"] = self.zone.name
         d.pop("zone", None)
         return d
@@ -234,11 +233,6 @@ class KronicleChannel(KronicleRbacBase):
                 cols[k].append(v)
         self.columns = dict(cols)
         return self.columns
-
-    def ensure_has_id(self) -> UUID:
-        if self.id:
-            return self.id
-        raise ValueError("Channel ID missing")
 
     def get_columns(self):
         return self.columns if self.columns else self._rows_to_columns()

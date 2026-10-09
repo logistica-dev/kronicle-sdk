@@ -1,5 +1,5 @@
 # tests/models/test_kronicle_rbac_base.py
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -8,14 +8,22 @@ from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 
 
 class TestKronicleRbacBaseValidation:
-    def test_explicit_none_id_generates_uuid(self):
-        # `if not v` branch: an explicit falsy id falls back to a fresh uuid4.
+    def test_explicit_none_id_stays_none(self):
+        # An omitted/None id means "not persisted yet" and must not be fabricated.
         g = KronicleGroup(id=None, name="test.group")
-        assert isinstance(g.id, UUID)
+        assert g.id is None
 
     def test_valid_uuid_string_is_normalized(self):
         uid = uuid4()
         assert KronicleGroup(id=str(uid)).id == uid  # type: ignore
+
+    def test_ensure_has_id_raises_when_absent(self):
+        with pytest.raises(ValueError, match="no id"):
+            KronicleGroup(name="test.group").ensure_has_id()
+
+    def test_ensure_has_id_returns_id(self):
+        uid = uuid4()
+        assert KronicleGroup(id=uid, name="test.group").ensure_has_id() == uid
 
     def test_explicit_none_name_is_kept(self):
         assert KronicleGroup(name=None).name is None

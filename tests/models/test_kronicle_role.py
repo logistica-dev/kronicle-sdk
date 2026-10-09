@@ -1,5 +1,5 @@
 # tests/models/test_kronicle_role.py
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -25,9 +25,9 @@ class TestKronicleRoleValidation:
         assert r.id == rid
         assert r.permissions == ["channel:read", "channel:write"]
 
-    def test_auto_id_when_missing(self):
+    def test_id_none_when_missing(self):
         r = KronicleRole(name="auto")
-        assert isinstance(r.id, UUID)
+        assert r.id is None
 
     def test_name_too_short(self):
         with pytest.raises(ValueError):
@@ -56,7 +56,7 @@ class TestKronicleRoleSerialization:
         r = KronicleRole(name="test.role")
         d = r.model_dump()
         assert d["name"] == "test.role"
-        assert "id" in d
+        assert "id" not in d
 
     def test_to_json_skip_nones(self):
         r = KronicleRole(name="test.role", permissions=["channel:read"])

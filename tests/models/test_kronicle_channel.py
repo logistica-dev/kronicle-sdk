@@ -1,7 +1,7 @@
 # tests/models/test_kronicle_channel.py
 from datetime import datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -152,14 +152,14 @@ class TestDataHelpers:
         assert c.columns == {"a": [1, 3], "b": [2, 4]}
 
     def test_ensure_has_id_returns_existing(self):
-        c = KronicleChannel(name="test.chan")
-        assert isinstance(c.ensure_has_id(), UUID)
-        assert c.ensure_has_id() == c.id
+        cid = uuid4()
+        c = KronicleChannel(id=cid, name="test.chan")
+        assert c.ensure_has_id() == cid
 
     def test_ensure_has_id_raises_when_missing(self):
         c = KronicleChannel(name="test.chan")
         c.id = None
-        with pytest.raises(ValueError, match="Channel ID missing"):
+        with pytest.raises(ValueError, match="no id"):
             c.ensure_has_id()
 
     def test_get_columns_returns_existing(self):

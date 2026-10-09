@@ -14,15 +14,15 @@ from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 
 
 def _role() -> KronicleRole:
-    return KronicleRole(name="writer", permissions=["channel:read"])
+    return KronicleRole(id=uuid4(), name="writer", permissions=["channel:read"])
 
 
 def _zone() -> KronicleZone:
-    return KronicleZone(name="ZoneA")
+    return KronicleZone(id=uuid4(), name="ZoneA")
 
 
 def _channel() -> KronicleChannel:
-    return KronicleChannel(name="chan")
+    return KronicleChannel(id=uuid4(), name="chan")
 
 
 def _row() -> KronicleRow:

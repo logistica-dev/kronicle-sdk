@@ -49,9 +49,15 @@ class KroniclePolicy(KronicleRbacBase):
             "subject": cls._extract_field(d, "subject", KronicleSubject),
         }
 
+    @staticmethod
+    def _same_id(a: object, b: object) -> bool:
+        """True only when both ids are present and equal (``None`` never matches)."""
+        return a is not None and a == b
+
     def _matches_subject(self, other: KroniclePolicy) -> bool:
-        return self.subject.type == other.subject.type and (self.subject.group_id or self.subject.user_id) == (
-            other.subject.group_id or other.subject.user_id
+        return self.subject.type == other.subject.type and self._same_id(
+            self.subject.group_id or self.subject.user_id,
+            other.subject.group_id or other.subject.user_id,
         )
 
 
@@ -68,13 +74,13 @@ class KronicleZonePolicy(KroniclePolicy):
     def matches(self, other: KronicleZonePolicy) -> bool:
         return (
             self._matches_subject(other)
-            and self.access_profile.role.id == other.access_profile.role.id
-            and self.access_profile.zone.id == other.access_profile.zone.id
+            and self._same_id(self.access_profile.role.id, other.access_profile.role.id)
+            and self._same_id(self.access_profile.zone.id, other.access_profile.zone.id)
         )
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["zone_id"] = uuid_to_str(self.access_profile.zone.id)
+        d["zone_id"] = uuid_to_str(self.access_profile.zone.ensure_has_id())
         d.pop("access_profile")
         return d
 
@@ -92,13 +98,13 @@ class KronicleChannelPolicy(KroniclePolicy):
     def matches(self, other: KronicleChannelPolicy) -> bool:
         return (
             self._matches_subject(other)
-            and self.access_profile.role.id == other.access_profile.role.id
-            and self.access_profile.channel.id == other.access_profile.channel.id
+            and self._same_id(self.access_profile.role.id, other.access_profile.role.id)
+            and self._same_id(self.access_profile.channel.id, other.access_profile.channel.id)
         )
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["channel_id"] = uuid_to_str(self.access_profile.channel.id)
+        d["channel_id"] = uuid_to_str(self.access_profile.channel.ensure_has_id())
         d.pop("access_profile")
         return d
 
@@ -116,8 +122,8 @@ class KronicleRowPolicy(KroniclePolicy):
     def matches(self, other: KronicleRowPolicy) -> bool:
         return (
             self._matches_subject(other)
-            and self.access_profile.role.id == other.access_profile.role.id
-            and self.access_profile.row.id == other.access_profile.row.id
+            and self._same_id(self.access_profile.role.id, other.access_profile.role.id)
+            and self._same_id(self.access_profile.row.id, other.access_profile.row.id)
         )
 
     def flatten(self) -> dict:

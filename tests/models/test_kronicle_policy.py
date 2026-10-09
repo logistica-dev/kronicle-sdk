@@ -21,15 +21,15 @@ from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 
 
 def _role(name: str = "writer") -> KronicleRole:
-    return KronicleRole(name=name, permissions=["channel:read"])
+    return KronicleRole(id=uuid4(), name=name, permissions=["channel:read"])
 
 
 def _zone(name: str = "ZoneA") -> KronicleZone:
-    return KronicleZone(name=name)
+    return KronicleZone(id=uuid4(), name=name)
 
 
 def _channel(name: str = "chan") -> KronicleChannel:
-    return KronicleChannel(name=name)
+    return KronicleChannel(id=uuid4(), name=name)
 
 
 def _row(row_id: int = 1) -> KronicleRow:
@@ -42,17 +42,19 @@ def _user_subject() -> KronicleSubject:
 
 class TestKronicleSubject:
     def test_from_user(self):
-        user = KronicleUser(name="test.user", email="user@example.com")
+        uid = uuid4()
+        user = KronicleUser(id=uid, name="test.user", email="user@example.com")
         subject = KronicleSubject.from_user(user)
         assert subject.type == "user"
-        assert subject.user_id == user.id
+        assert subject.user_id == uid
         assert subject.name == user.name
 
     def test_from_group(self):
-        group = KronicleGroup(name="Admins")
+        gid = uuid4()
+        group = KronicleGroup(id=gid, name="Admins")
         subject = KronicleSubject.from_group(group)
         assert subject.type == "group"
-        assert subject.group_id == group.id
+        assert subject.group_id == gid
         assert subject.name == group.name
 
     def test_defaults(self):
@@ -107,7 +109,7 @@ class TestKronicleZonePolicy:
         assert p1.matches(p2) is False
 
     def test_matches_group_subject(self):
-        group = KronicleGroup(name="Admins")
+        group = KronicleGroup(id=uuid4(), name="Admins")
         subject = KronicleSubject.from_group(group)
         zone, role = _zone(), _role()
         p1 = KronicleZonePolicy(subject=subject, access_profile=KronicleZoneAccess(role=role, zone=zone))

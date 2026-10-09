@@ -975,9 +975,10 @@ class TestKronicleRbacPolicies:
         assert rbac.get_zone_policy_by_name("Ghost") is None
 
     def test_get_zone_policy_id_branch(self, rbac, monkeypatch):
-        existing = _zone_policy_obj(uuid4(), uuid4())
+        pid = uuid4()
+        existing = _zone_policy_obj(uuid4(), uuid4(), policy_id=pid)
         monkeypatch.setattr(rbac, "get_zone_policy_by_id", lambda **kw: existing)
-        assert rbac.get_zone_policy(_zone_policy_obj(uuid4(), uuid4())) is existing
+        assert rbac.get_zone_policy(_zone_policy_obj(uuid4(), uuid4(), policy_id=pid)) is existing
 
     def test_get_zone_policy_name_branch(self, rbac, monkeypatch):
         existing = _zone_policy_obj(uuid4(), uuid4(), name="Named")
@@ -1028,9 +1029,10 @@ class TestKronicleRbacPolicies:
         assert rbac.get_channel_policy_by_name("Ghost") is None
 
     def test_get_channel_policy_id_branch(self, rbac, monkeypatch):
-        existing = _channel_policy_obj(uuid4(), uuid4())
+        pid = uuid4()
+        existing = _channel_policy_obj(uuid4(), uuid4(), policy_id=pid)
         monkeypatch.setattr(rbac, "get_channel_policy_by_id", lambda **kw: existing)
-        assert rbac.get_channel_policy(_channel_policy_obj(uuid4(), uuid4())) is existing
+        assert rbac.get_channel_policy(_channel_policy_obj(uuid4(), uuid4(), policy_id=pid)) is existing
 
     def test_get_channel_policy_name_branch(self, rbac, monkeypatch):
         existing = _channel_policy_obj(uuid4(), uuid4(), name="Named")
@@ -1081,10 +1083,10 @@ class TestKronicleRbacPolicies:
         assert rbac.get_row_policy_by_name("Ghost") is None
 
     def test_get_row_policy_id_branch(self, rbac, monkeypatch):
-        cid = uuid4()
-        existing = _row_policy_obj(uuid4(), 42, cid)
+        cid, pid = uuid4(), uuid4()
+        existing = _row_policy_obj(uuid4(), 42, cid, policy_id=pid)
         monkeypatch.setattr(rbac, "get_row_policy_by_id", lambda **kw: existing)
-        assert rbac.get_row_policy(_row_policy_obj(uuid4(), 42, cid)) is existing
+        assert rbac.get_row_policy(_row_policy_obj(uuid4(), 42, cid, policy_id=pid)) is existing
 
     def test_get_row_policy_name_branch(self, rbac, monkeypatch):
         cid = uuid4()

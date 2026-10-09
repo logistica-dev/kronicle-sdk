@@ -31,7 +31,7 @@ class TestCreateChannel:
 
         def mock_post(*, route, body, **kw):
             captured["route"] = route
-            return channel_dict(payload.id)
+            return channel_dict(zid)
 
         monkeypatch.setattr(writer, "get_channel", lambda c: None)
         monkeypatch.setattr(writer, "post", mock_post)

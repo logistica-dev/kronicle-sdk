@@ -56,16 +56,16 @@ class KronicleWriter(KronicleAbstractChannelConnector):
 
         To move a channel to another zone, use ``KronicleCore.change_channel_zone``.
         """
-        payload = self._ensure_kronicle_channel(body)
-        channel_id = ensure_uuid4(payload.id)
-        patched = self.patch(route=f"channels/{channel_id}", body=payload)
+        channel = self._ensure_kronicle_channel(body)
+        channel_id = channel.ensure_has_id()
+        patched = self.patch(route=f"channels/{channel_id}", body=channel)
         return self._to_kronicle_channel(patched)
 
     def insert_rows_and_update_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
         """Creates a new channel if it doesn't exist already and insert data rows"""
-        payload = self._ensure_kronicle_channel(body)
-        channel_id = ensure_uuid4(payload.id)
-        existing = self.post(route=f"channels/{channel_id}", body=payload)
+        channel = self._ensure_kronicle_channel(body)
+        channel_id = channel.ensure_has_id()
+        existing = self.post(route=f"channels/{channel_id}", body=channel)
         return self._to_kronicle_channel(existing)
 
     # def add_rows(self, body: KronicleChannel | dict):

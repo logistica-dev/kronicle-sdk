@@ -26,7 +26,7 @@ class KronicleAccessProfile(KronicleRbacBase):
         d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["role_id"] = uuid_to_str(self.role.id)
+        d["role_id"] = uuid_to_str(self.role.ensure_has_id())
         d["role_name"] = self.role.name
         d.pop("role")
         return d
@@ -46,7 +46,7 @@ class KronicleZoneAccess(KronicleAccessProfile):
         d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["zone_id"] = uuid_to_str(self.zone.id)
+        d["zone_id"] = uuid_to_str(self.zone.ensure_has_id())
         d["zone_name"] = self.zone.name
         d.pop("zone")
         return d
@@ -66,7 +66,7 @@ class KronicleChannelAccess(KronicleAccessProfile):
         d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["id"] = uuid_to_str(self.channel.id)
+        d["id"] = uuid_to_str(self.channel.ensure_has_id())
         d["channel_name"] = self.channel.name
         d.pop("channel")
         return d

@@ -4,9 +4,9 @@ import re
 from ast import TypeVar
 from json import dumps
 from typing import Any, ClassVar, Self
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
 
@@ -18,15 +18,15 @@ _MAX_DETAILS_JSON_SIZE = 64 * 1024  # 64KB, matching kronicle's server InputSche
 class KronicleRbacBase(BaseModel):
     _name_regex: ClassVar[str] = r"[A-Za-z][A-Za-z0-9_ .-]{3,63}"
 
-    id: UUID | None = Field(default_factory=uuid4)
+    id: UUID | None = None  # Field(default_factory=uuid4)
     name: str | None = None
     details: dict[str, Any] | None = None
 
     @field_validator("id", mode="before")
     @classmethod
-    def validate_id(cls, v: str | UUID | None) -> UUID:
+    def validate_id(cls, v: str | UUID | None) -> UUID | None:
         if not v:
-            return uuid4()
+            return None
         return ensure_uuid4(v)
 
     @field_validator("name")
@@ -55,6 +55,18 @@ class KronicleRbacBase(BaseModel):
         if len(dumps(v).encode("utf-8")) > _MAX_DETAILS_JSON_SIZE:
             raise ValueError("details field is too large")
         return v
+
+    def ensure_has_id(self) -> UUID:
+        """Return ``self.id``, raising if this object has not been persisted yet.
+
+        ``id`` is optional on the base so that "not yet created" can be modelled
+        honestly (the server assigns the id on create). Any operation that needs
+        to *address* a persisted object should call this first instead of
+        fabricating an id.
+        """
+        if self.id is None:
+            raise ValueError(f"{type(self).__name__} has no id (not persisted?)")
+        return self.id
 
     def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
         d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
