@@ -196,7 +196,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
             here,
             f"Looking for channel '{channel_name}' (normalized as '{norm_name}')",
         )
-        res = self.get(route=f"channels/?name={norm_name}", strict=None)
+        res = self.get(route=f"channels/?name={norm_name}", strict=False)
         log_d("get_chan_by_name", res)
         return self._ensure_is_payload_or_none(res)
 
@@ -223,7 +223,7 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         return self._ensure_is_payload_list(self.get(route=f"channels/?metadata={quote(meta_str)}"))
 
     def get_channel_with_max_rows(self) -> KronicleChannel | None:
-        max_channel = max(self.all_channels, key=lambda chan: chan.available_rows or 0)
+        max_channel = max(self.all_channels, key=lambda chan: chan.available_rows or 0, default=None)
         return max_channel
 
     def get_rows_for_channel(

@@ -5,7 +5,7 @@ import pytest
 
 from kronicle_sdk.connectors.channel.channel_reader import KronicleReader
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
-from kronicle_sdk.models.data.row_filter import MAX_LIMIT, MAX_OFFSET, RowFilter
+from kronicle_sdk.models.data.row_filter import MAX_LIMIT, MAX_OFFSET, RowFilter, split_strip_i
 
 
 class TestRowFilterParams:
@@ -158,3 +158,44 @@ class TestGetRowsFilters:
         )
         assert "columns" in captured["route"]
         assert captured["params"] == {"columns": "time,value"}
+
+
+class TestRowFilterNoneDefaults:
+    def test_field_validators_pass_none_through(self):
+        # Pydantic skips validators for default values, so the None short-circuits
+        # in the validators are exercised directly.
+        assert RowFilter._cap_limit(None) is None
+        assert RowFilter._cap_offset(None) is None
+        assert RowFilter._norm_sort(None) is None
+        assert RowFilter._norm_columns(None) is None
+
+    def test_empty_multi_value_filters_kept_empty(self):
+        assert RowFilter(any={}).any == {}
+        assert RowFilter(has={}).has == {}
+        assert RowFilter._norm_any(None) is None
+        assert RowFilter._norm_has({}) == {}
+
+
+class TestRowFilterModelDump:
+    def test_defaults_to_exclude_none(self):
+        assert RowFilter(limit=5).model_dump() == {"limit": 5}
+
+    def test_can_include_none(self):
+        dumped = RowFilter(limit=5).model_dump(exclude_none=False)
+        assert dumped["limit"] == 5
+        assert dumped["offset"] is None
+
+
+class TestSplitStripI:
+    def test_falsy_returns_empty_list(self):
+        assert split_strip_i(None) == []
+        assert split_strip_i("") == []
+
+    def test_scalar_string_is_split_and_stripped(self):
+        assert split_strip_i("a, b ,c") == ["a", "b", "c"]
+
+    def test_scalar_non_string_is_stringified(self):
+        assert split_strip_i(5) == ["5"]
+
+    def test_list_values_are_flattened(self):
+        assert split_strip_i(["a,b", " c "]) == ["a", "b", "c"]

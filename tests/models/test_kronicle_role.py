@@ -77,3 +77,8 @@ class TestKronicleRoleSerialization:
         s = str(r)
         assert "test.role" in s
         assert "Role" in s
+
+    def test_model_dump_drops_restrictions(self):
+        r = KronicleRole(name="test.role", restrictions=["rbac:delete"])
+        d = r.model_dump()
+        assert "restrictions" not in d

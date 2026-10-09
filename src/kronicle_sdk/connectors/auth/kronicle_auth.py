@@ -74,8 +74,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         if self._exp is not None:
             return self._exp
         jwt_payload = loads(decode_b64url(self._jwt.split(".")[1]))
-        exp = int(jwt_payload.get("exp"))
-        self._exp = exp if exp is not None else 0
+        exp = jwt_payload.get("exp")
+        self._exp = int(exp) if exp is not None else 0
         return self._exp
 
     def is_jwt_valid(self) -> bool:

@@ -1,11 +1,12 @@
 # kronicle/connectors/abc_connector.py
-import contextlib
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Generator
+from collections.abc import Callable
 from time import sleep
 from typing import Any
 
 from requests import Response, delete, get, patch, post, put
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout as RequestsTimeout
 
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.kronicle_errors import (
@@ -43,40 +44,49 @@ class KronicleAbstractConnector(ABC):
     def prefix(self) -> str:
         raise NotImplementedError("Define a route prefix such as 'api/v1', 'data/v1', 'setup/v1', 'auth/v1'...")
 
-    def _join(self, route: str | None, *, prefix: str | None = None) -> str:
-        """Join base URL, prefix, and route into a full URL. Optionally override prefix."""
-        return slash_join(self.url, prefix or self.prefix, route)
+    def _join_url(self, route: str | None, *, prefix: str | None = None) -> str:
+        """
+        Join the base URL, a prefix, and a route into a full URL.
+
+        Args:
+            route: route path appended after the prefix (may be None).
+            prefix: override this call's prefix. Defaults to the connector's ``prefix`` when None;
+                an empty string is kept as-is, so it omits the prefix segment entirely.
+
+        Returns:
+            The joined URL, with None/empty fragments skipped.
+        """
+        return slash_join(self.url, prefix if prefix is not None else self.prefix, route)
 
     # ----------------------------------------------------------------------------------------------
     # Internal helpers
     # ----------------------------------------------------------------------------------------------
-    @contextlib.contextmanager
-    def _attempt(
-        self,
-        func: Callable[[], Any],
-        retries: int | None = None,
-        delay: float | None = None,
-    ) -> Generator[Any, None, None]:
+    #: Connection-level failures (``requests.ConnectionError`` / ``Timeout``) are retried only for
+    #: these idempotent methods, so a retry can never duplicate a write (``POST`` / ``PATCH`` are
+    #: attempted once).
+    _retriable_methods: frozenset[str] = frozenset({"GET", "HEAD", "PUT", "DELETE"})
+
+    def _attempt(self, func: Callable[[], Any], retries: int | None = None, delay: float | None = None) -> Any:
         """
-        Context manager for retries with delay, returns func() result if successful.
+        Call ``func``, retrying only on connection-level errors.
+
+        ``requests`` connection errors and timeouts are retried up to ``retries`` times, sleeping
+        ``delay`` seconds between attempts. HTTP errors and malformed responses are never retried.
+        When all attempts fail, the last error is chained into a ``KronicleConnectionError``.
         """
         here = "_attempt"
-        retries = retries if retries else self._retries
+        retries = retries if retries is not None else self._retries
         delay = delay if delay is not None else self._delay
-        last_exc = None
+        last_exc: Exception | None = None
 
         for attempt in range(1, retries + 1):
             try:
                 return func()
-            except (KronicleResponseError, KronicleHTTPError) as exc:
-                # Non-retriable: malformed response or HTTP error
-                log_w(here, f"[attempt {attempt}] Non-retriable error", exc)
-                raise
-            except Exception as exc:  # noqa: BLE001
-                # retriable: network error, timeout, etc.
+            except (RequestsConnectionError, RequestsTimeout) as exc:
                 last_exc = exc
-                log_w(here, f"[attempt {attempt}] retriable exception", exc)
-                sleep(self._delay)
+                log_w(here, f"[attempt {attempt}/{retries}] retriable connection error", exc)
+                if attempt < retries:
+                    sleep(delay)
 
         raise KronicleConnectionError(f"Failed after {retries} attempts") from last_exc
 
@@ -105,7 +115,14 @@ class KronicleAbstractConnector(ABC):
         if response is None:
             raise KronicleResponseError("No response received from Kronicle")
 
-        res_content = response.json() if hasattr(response, "json") else response.content
+        try:
+            res_content = response.json() if hasattr(response, "json") else response.content
+        except Exception as exc:
+            if not response.ok:
+                # Non-JSON error body: let from_response build a KronicleHTTPError.
+                raise KronicleHTTPError.from_response(response, url=url, method=method, params=params) from exc
+            raise KronicleResponseError(f"Failed to decode JSON: {response.content}") from exc
+
         if not response.ok:
             if should_log:
                 log_e(here, "Request failed", method, url, params or {}, "<=", res_content)
@@ -155,7 +172,7 @@ class KronicleAbstractConnector(ABC):
         if here.startswith("Kronicle"):
             here = "K" + here[8:]
         # log_d(here, "prefix", prefix)
-        url = self._join(route, prefix=prefix)
+        url = self._join_url(route, prefix=prefix)
         method_str = self.method_str(method)
         if method_str != "GET":
             self._invalidate_cache()
@@ -171,8 +188,10 @@ class KronicleAbstractConnector(ABC):
         if should_log:
             log_d(here, "Request", method_str, url + param_dict_to_str(params))
         try:
-            response: Response = method(url=url, **request_kwargs)
-
+            if method_str in self._retriable_methods:
+                response: Response = self._attempt(lambda: method(url=url, **request_kwargs))
+            else:
+                response = method(url=url, **request_kwargs)
         except KronicleHTTPError as e:
             log_e(here, "KronicleHTTPError", f"{e}")
             raise

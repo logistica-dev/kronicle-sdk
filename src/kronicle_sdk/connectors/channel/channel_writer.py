@@ -51,18 +51,15 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         existing = self.post(route=f"zones/{zone_id}/channels", body=payload)
         return self._to_kronicle_channel(existing)
 
-    def patch_channel(
-        self,
-        body: KronicleChannel | dict,
-        *,
-        zone_id: UUID | str | None = None,
-    ) -> KronicleChannel:
-        """Creates a new channel if it doesn't exist already and insert data rows"""
-        zone_id = ensure_uuid4(zone_id) if zone_id else None
+    def patch_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
+        """Patch an existing channel with the given fields.
+
+        To move a channel to another zone, use ``KronicleCore.change_channel_zone``.
+        """
         payload = self._ensure_kronicle_channel(body)
         channel_id = ensure_uuid4(payload.id)
-        existing = self.patch(route=f"channels/{channel_id}", body=payload)
-        return self._to_kronicle_channel(existing)
+        patched = self.patch(route=f"channels/{channel_id}", body=payload)
+        return self._to_kronicle_channel(patched)
 
     def insert_rows_and_update_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
         """Creates a new channel if it doesn't exist already and insert data rows"""

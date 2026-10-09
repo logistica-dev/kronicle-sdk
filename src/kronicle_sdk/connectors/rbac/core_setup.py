@@ -84,8 +84,8 @@ class KronicleCore(KronicleUsrLogin):
         return [KronicleChannel.from_json(c) for c in channels]
 
     def get_core_channel(self, *, channel_id: UUID) -> KronicleChannel | None:
-        res = self.get(route=f"/channels/{channel_id}")
-        return res if KronicleChannel.from_json(res) else None
+        existing = self.get(route=f"/channels/{channel_id}")
+        return KronicleChannel.from_json(existing) if existing else None
 
     def patch_core_channel(
         self,
@@ -103,6 +103,14 @@ class KronicleCore(KronicleUsrLogin):
         if zone_id is not None:
             body["zone_id"] = str(zone_id)
         return KronicleChannel.from_json(self.patch(route=f"/channels/{channel_id}", body=body))
+
+    def change_channel_zone(self, *, channel_id: UUID, zone_id: UUID) -> KronicleChannel:
+        """Move an existing channel to another zone.
+
+        Explicit convenience wrapper over :meth:`patch_core_channel` for the
+        zone-only case.
+        """
+        return self.patch_core_channel(channel_id=channel_id, zone_id=zone_id)
 
     def delete_core_channel(self, channel_id: UUID) -> KronicleChannel:
         return KronicleChannel.from_json(self.delete(route=f"/channels/{channel_id}"))

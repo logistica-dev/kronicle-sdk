@@ -86,7 +86,7 @@ where = ["src"]
 
 # ----- Tool: pyright
 [tool.pyright]
-exclude = ["**/__pycache__", "**/.venv", "**/.env"]
+exclude = ["**/__pycache__", "**/.venv", "**/.env", "**/.vscode*"]
 executionEnvironments = [{ root = ".", extraPaths = ["src"] }]
 extraPaths = ["src"]
 include = ["src", "tests"]
