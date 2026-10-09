@@ -768,6 +768,31 @@ class TestKronicleRbacAccessProfiles:
         result = rbac.create_zone_access_profile(access)
         assert isinstance(result, KronicleZoneAccess) and result.zone.id == zid
 
+    def test_create_zone_access_profile_existing(self, rbac, monkeypatch):
+        existing = KronicleZoneAccess(
+            role=KronicleRole(id=uuid4(), name="Reader"),
+            zone=KronicleZone(id=uuid4(), name="ZoneA"),
+        )
+        monkeypatch.setattr(rbac, "get_zone_access_profile", lambda access: existing)
+        monkeypatch.setattr(rbac, "post", lambda **kw: pytest.fail("post should not be called"))
+        assert rbac.create_zone_access_profile(existing) is existing
+
+    def test_create_zone_access_profile_assigns_id(self, rbac, monkeypatch):
+        captured = {}
+
+        def mock_post(*, route, body, **kw):
+            captured["body"] = body
+            return _zone_access_dict(uuid4(), uuid4())
+
+        monkeypatch.setattr(rbac, "get_zone_access_profile", lambda access: None)
+        monkeypatch.setattr(rbac, "post", mock_post)
+        access = KronicleZoneAccess(
+            role=KronicleRole(id=uuid4(), name="Reader"),
+            zone=KronicleZone(id=uuid4(), name="ZoneA"),
+        )
+        rbac.create_zone_access_profile(access)
+        assert captured["body"]["id"] is not None
+
     def test_list_zone_access_profiles_non_empty(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: [_zone_access_dict(uuid4(), uuid4())])
         assert len(rbac.list_zone_access_profiles()) == 1
@@ -780,7 +805,7 @@ class TestKronicleRbacAccessProfiles:
         pid, zid = uuid4(), uuid4()
         fake = _zone_access_dict(uuid4(), zid)
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: fake)
-        result = rbac.get_zone_access_profile(profile_id=pid)
+        result = rbac.get_zone_access_profile_by_id(profile_id=pid)
         assert isinstance(result, KronicleZoneAccess)
 
     def test_get_zone_access_profile_by_name(self, rbac, monkeypatch):
@@ -792,6 +817,44 @@ class TestKronicleRbacAccessProfiles:
     def test_get_zone_access_profile_by_name_none(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: None)
         assert rbac.get_zone_access_profile_by_name("Ghost") is None
+
+    def test_get_zone_access_profile_by_id_not_found(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(404))
+        assert rbac.get_zone_access_profile_by_id(profile_id=uuid4()) is None
+
+    def test_get_zone_access_profile_by_id_reraises_non_404(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(500))
+        with pytest.raises(KronicleHTTPError):
+            rbac.get_zone_access_profile_by_id(profile_id=uuid4())
+
+    def test_get_zone_access_profile_id_branch(self, rbac, monkeypatch):
+        existing = KronicleZoneAccess(
+            id=uuid4(),
+            role=KronicleRole(id=uuid4(), name="Reader"),
+            zone=KronicleZone(id=uuid4(), name="ZoneA"),
+        )
+        monkeypatch.setattr(rbac, "get_zone_access_profile_by_id", lambda **kw: existing)
+        assert rbac.get_zone_access_profile(existing) is existing
+
+    def test_get_zone_access_profile_name_branch(self, rbac, monkeypatch):
+        existing = KronicleZoneAccess(
+            name="Zone acc",
+            role=KronicleRole(id=uuid4(), name="Reader"),
+            zone=KronicleZone(id=uuid4(), name="ZoneA"),
+        )
+        monkeypatch.setattr(rbac, "get_zone_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_zone_access_profile_by_name", lambda **kw: existing)
+        assert rbac.get_zone_access_profile(existing) is existing
+
+    def test_get_zone_access_profile_none(self, rbac, monkeypatch):
+        access = KronicleZoneAccess(
+            name="Ghost",
+            role=KronicleRole(id=uuid4(), name="Reader"),
+            zone=KronicleZone(id=uuid4(), name="ZoneA"),
+        )
+        monkeypatch.setattr(rbac, "get_zone_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_zone_access_profile_by_name", lambda **kw: None)
+        assert rbac.get_zone_access_profile(access) is None
 
     def test_patch_zone_access_profile(self, rbac, monkeypatch):
         pid, zid = uuid4(), uuid4()
@@ -826,6 +889,31 @@ class TestKronicleRbacAccessProfiles:
         )
         assert rbac.create_channel_access_profile(access).channel.id == cid
 
+    def test_create_channel_access_profile_existing(self, rbac, monkeypatch):
+        existing = KronicleChannelAccess(
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            channel=KronicleChannel(id=uuid4(), name="Channel_1"),
+        )
+        monkeypatch.setattr(rbac, "get_channel_access_profile", lambda access: existing)
+        monkeypatch.setattr(rbac, "post", lambda **kw: pytest.fail("post should not be called"))
+        assert rbac.create_channel_access_profile(existing) is existing
+
+    def test_create_channel_access_profile_assigns_id(self, rbac, monkeypatch):
+        captured = {}
+
+        def mock_post(*, route, body, **kw):
+            captured["body"] = body
+            return _channel_access_dict(uuid4(), uuid4())
+
+        monkeypatch.setattr(rbac, "get_channel_access_profile", lambda access: None)
+        monkeypatch.setattr(rbac, "post", mock_post)
+        access = KronicleChannelAccess(
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            channel=KronicleChannel(id=uuid4(), name="Channel_1"),
+        )
+        rbac.create_channel_access_profile(access)
+        assert captured["body"]["id"] is not None
+
     def test_list_channel_access_profiles_non_empty(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: [_channel_access_dict(uuid4(), uuid4())])
         assert len(rbac.list_channel_access_profiles()) == 1
@@ -837,7 +925,7 @@ class TestKronicleRbacAccessProfiles:
     def test_get_channel_access_profile(self, rbac, monkeypatch):
         pid, cid = uuid4(), uuid4()
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: _channel_access_dict(uuid4(), cid))
-        assert isinstance(rbac.get_channel_access_profile(profile_id=pid), KronicleChannelAccess)
+        assert isinstance(rbac.get_channel_access_profile_by_id(profile_id=pid), KronicleChannelAccess)
 
     def test_get_channel_access_profile_by_name(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: _channel_access_dict(uuid4(), uuid4()))
@@ -846,6 +934,44 @@ class TestKronicleRbacAccessProfiles:
     def test_get_channel_access_profile_by_name_none(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: None)
         assert rbac.get_channel_access_profile_by_name("Ghost") is None
+
+    def test_get_channel_access_profile_by_id_not_found(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(404))
+        assert rbac.get_channel_access_profile_by_id(profile_id=uuid4()) is None
+
+    def test_get_channel_access_profile_by_id_reraises_non_404(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(500))
+        with pytest.raises(KronicleHTTPError):
+            rbac.get_channel_access_profile_by_id(profile_id=uuid4())
+
+    def test_get_channel_access_profile_id_branch(self, rbac, monkeypatch):
+        existing = KronicleChannelAccess(
+            id=uuid4(),
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            channel=KronicleChannel(id=uuid4(), name="Channel_1"),
+        )
+        monkeypatch.setattr(rbac, "get_channel_access_profile_by_id", lambda **kw: existing)
+        assert rbac.get_channel_access_profile(existing) is existing
+
+    def test_get_channel_access_profile_name_branch(self, rbac, monkeypatch):
+        existing = KronicleChannelAccess(
+            name="Channel acc",
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            channel=KronicleChannel(id=uuid4(), name="Channel_1"),
+        )
+        monkeypatch.setattr(rbac, "get_channel_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_channel_access_profile_by_name", lambda **kw: existing)
+        assert rbac.get_channel_access_profile(existing) is existing
+
+    def test_get_channel_access_profile_none(self, rbac, monkeypatch):
+        access = KronicleChannelAccess(
+            name="Ghost",
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            channel=KronicleChannel(id=uuid4(), name="Channel_1"),
+        )
+        monkeypatch.setattr(rbac, "get_channel_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_channel_access_profile_by_name", lambda **kw: None)
+        assert rbac.get_channel_access_profile(access) is None
 
     def test_patch_channel_access_profile(self, rbac, monkeypatch):
         pid, cid = uuid4(), uuid4()
@@ -882,6 +1008,32 @@ class TestKronicleRbacAccessProfiles:
         )
         assert rbac.create_row_access_profile(access).row.id == 42
 
+    def test_create_row_access_profile_existing(self, rbac, monkeypatch):
+        cid = uuid4()
+        existing = KronicleRowAccess(
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            row=KronicleRow(id=42, channel_id=cid, name="Row_1"),
+        )
+        monkeypatch.setattr(rbac, "get_row_access_profile", lambda access: existing)
+        monkeypatch.setattr(rbac, "post", lambda **kw: pytest.fail("post should not be called"))
+        assert rbac.create_row_access_profile(existing) is existing
+
+    def test_create_row_access_profile_assigns_id(self, rbac, monkeypatch):
+        captured = {}
+
+        def mock_post(*, route, body, **kw):
+            captured["body"] = body
+            return _row_access_dict(uuid4(), 42, uuid4())
+
+        monkeypatch.setattr(rbac, "get_row_access_profile", lambda access: None)
+        monkeypatch.setattr(rbac, "post", mock_post)
+        access = KronicleRowAccess(
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            row=KronicleRow(id=42, channel_id=uuid4(), name="Row_1"),
+        )
+        rbac.create_row_access_profile(access)
+        assert captured["body"]["id"] is not None
+
     def test_list_row_access_profiles_non_empty(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: [_row_access_dict(uuid4(), 42, uuid4())])
         assert len(rbac.list_row_access_profiles()) == 1
@@ -893,7 +1045,7 @@ class TestKronicleRbacAccessProfiles:
     def test_get_row_access_profile(self, rbac, monkeypatch):
         cid = uuid4()
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: _row_access_dict(uuid4(), 7, cid))
-        assert isinstance(rbac.get_row_access_profile(profile_id=uuid4()), KronicleRowAccess)
+        assert isinstance(rbac.get_row_access_profile_by_id(profile_id=uuid4()), KronicleRowAccess)
 
     def test_get_row_access_profile_by_name(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: _row_access_dict(uuid4(), 7, uuid4()))
@@ -902,6 +1054,44 @@ class TestKronicleRbacAccessProfiles:
     def test_get_row_access_profile_by_name_none(self, rbac, monkeypatch):
         monkeypatch.setattr(rbac, "get", lambda *, route, **kw: None)
         assert rbac.get_row_access_profile_by_name("Ghost") is None
+
+    def test_get_row_access_profile_by_id_not_found(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(404))
+        assert rbac.get_row_access_profile_by_id(profile_id=uuid4()) is None
+
+    def test_get_row_access_profile_by_id_reraises_non_404(self, rbac, monkeypatch):
+        monkeypatch.setattr(rbac, "get", _raise_status(500))
+        with pytest.raises(KronicleHTTPError):
+            rbac.get_row_access_profile_by_id(profile_id=uuid4())
+
+    def test_get_row_access_profile_id_branch(self, rbac, monkeypatch):
+        existing = KronicleRowAccess(
+            id=uuid4(),
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            row=KronicleRow(id=7, channel_id=uuid4(), name="Row_1"),
+        )
+        monkeypatch.setattr(rbac, "get_row_access_profile_by_id", lambda **kw: existing)
+        assert rbac.get_row_access_profile(existing) is existing
+
+    def test_get_row_access_profile_name_branch(self, rbac, monkeypatch):
+        existing = KronicleRowAccess(
+            name="Row acc",
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            row=KronicleRow(id=7, channel_id=uuid4(), name="Row_1"),
+        )
+        monkeypatch.setattr(rbac, "get_row_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_row_access_profile_by_name", lambda **kw: existing)
+        assert rbac.get_row_access_profile(existing) is existing
+
+    def test_get_row_access_profile_none(self, rbac, monkeypatch):
+        access = KronicleRowAccess(
+            name="Ghost",
+            role=KronicleRole(id=uuid4(), name="Writer"),
+            row=KronicleRow(id=7, channel_id=uuid4(), name="Row_1"),
+        )
+        monkeypatch.setattr(rbac, "get_row_access_profile_by_id", lambda **kw: None)
+        monkeypatch.setattr(rbac, "get_row_access_profile_by_name", lambda **kw: None)
+        assert rbac.get_row_access_profile(access) is None
 
     def test_patch_row_access_profile(self, rbac, monkeypatch):
         pid, cid = uuid4(), uuid4()

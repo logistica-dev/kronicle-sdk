@@ -1,5 +1,5 @@
 # kronicle_sdk/connectors/rbac/core_setup.py
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from kronicle_sdk.connectors.abc_connector import KronicleHTTPError
 from kronicle_sdk.connectors.auth.kronicle_auth import KronicleUsrLogin
@@ -49,6 +49,8 @@ class KronicleCore(KronicleUsrLogin):
         if existing_zone := self.get_zone(zone):
             log_i(here, f"Zone {existing_zone.name} [{existing_zone.id}] already exist")
             return existing_zone
+        if zone.id is None:
+            zone.id = uuid4()
         created = self.post(route="/zones", body=zone.to_json())
         return KronicleZone.from_json(created)
 

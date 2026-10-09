@@ -176,7 +176,7 @@ class TestKronicleRbacZoneAccessProfiles:
             return fake
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        result = rbac.get_zone_access_profile(profile_id=pid)
+        result = rbac.get_zone_access_profile_by_id(profile_id=pid)
         assert isinstance(result, KronicleZoneAccess)
         assert str(result.id) == fake["id"]
 
@@ -235,7 +235,7 @@ class TestKronicleRbacChannelAccessProfiles:
             return fake
 
         monkeypatch.setattr(rbac, "get", mock_get)
-        result = rbac.get_channel_access_profile(profile_id=pid)
+        result = rbac.get_channel_access_profile_by_id(profile_id=pid)
         assert isinstance(result, KronicleChannelAccess)
         assert str(result.id) == fake["id"]
 
