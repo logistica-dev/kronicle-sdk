@@ -10,7 +10,7 @@ from kronicle_sdk.connectors.channel.abc_channel_connector import (
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
 from kronicle_sdk.models.iso_datetime import IsoDateTime, now_local
 from kronicle_sdk.utils.log import log_i
-from kronicle_sdk.utils.str_utils import ensure_uuid4, tiny_id, uuid4_str
+from kronicle_sdk.utils.str_utils import ensure_uuid4
 
 
 class KronicleWriter(KronicleAbstractChannelConnector):
@@ -73,15 +73,17 @@ class KronicleWriter(KronicleAbstractChannelConnector):
     #     payload = self._ensure_body_as_payload(body)
     #     return self.insert_rows_and_upsert_channel(body=payload)
 
-    def insert_rows(self, id, rows: list[dict[str, Any]]) -> KronicleChannel:
+    def insert_rows(self, id: UUID | str, rows: list[dict[str, Any]]) -> KronicleChannel:
         """Insert rows for an existing channel"""
-        payload = KronicleChannel(id=id, rows=rows)
-        existing = self.post(f"channels/{id}/rows", body=payload)
+        channel_id = ensure_uuid4(id)
+        channel = KronicleChannel(id=channel_id, rows=rows)
+        existing = self.post(f"channels/{channel_id}/rows", body=channel)
         return self._to_kronicle_channel(existing)
 
 
 if __name__ == "__main__":  # pragma: no cover
     from kronicle_sdk.utils.log import log_d
+    from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
     here = "KronicleWriter"
     log_d(here)

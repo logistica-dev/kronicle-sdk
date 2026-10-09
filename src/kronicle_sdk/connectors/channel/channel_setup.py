@@ -9,7 +9,6 @@ from kronicle_sdk.models.iso_datetime import now_local
 from kronicle_sdk.models.kronicle_errors import KronicleOperationError
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.log import log_w
-from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
 
 class KronicleSetup(KronicleWriter):
@@ -64,6 +63,7 @@ class KronicleSetup(KronicleWriter):
 
 if __name__ == "__main__":  # pragma: no cover
     from kronicle_sdk.utils.log import log_d
+    from kronicle_sdk.utils.str_utils import tiny_id, uuid4_str
 
     here = "ksetup"
     log_d(here)

@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic_core import core_schema
 
+from kronicle_sdk.utils.str_utils import get_type
+
 # ----------------------------------------------------------------------
 # System local timezone
 # ----------------------------------------------------------------------
@@ -120,7 +122,7 @@ class IsoDateTime(datetime):
                 except ValueError as e:
                     raise ValueError(f"Cannot parse datetime from '{value}'") from e
 
-        raise ValueError(f"Cannot normalize type '{type(value).__name__}' to IsoDateTime")
+        raise ValueError(f"Cannot normalize type '{get_type(value)}' to IsoDateTime")
 
     # ------------------------------------------------------------------
     # Pydantic v2 integration

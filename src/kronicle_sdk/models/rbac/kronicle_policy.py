@@ -13,7 +13,7 @@ from kronicle_sdk.models.rbac.kronicle_access_profile import (
 from kronicle_sdk.models.rbac.kronicle_group import KronicleGroup
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_user import KronicleUser
-from kronicle_sdk.utils.str_utils import uuid_to_str
+from kronicle_sdk.utils.str_utils import serialize_uuid
 
 
 class KronicleSubject(KronicleRbacBase):
@@ -80,7 +80,7 @@ class KronicleZonePolicy(KroniclePolicy):
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["zone_id"] = uuid_to_str(self.access_profile.zone.ensure_has_id())
+        d["zone_id"] = serialize_uuid(self.access_profile.zone.ensure_has_id())
         d.pop("access_profile")
         return d
 
@@ -104,7 +104,7 @@ class KronicleChannelPolicy(KroniclePolicy):
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["channel_id"] = uuid_to_str(self.access_profile.channel.ensure_has_id())
+        d["channel_id"] = serialize_uuid(self.access_profile.channel.ensure_has_id())
         d.pop("access_profile")
         return d
 
@@ -128,6 +128,6 @@ class KronicleRowPolicy(KroniclePolicy):
 
     def flatten(self) -> dict:
         d = self.model_dump()
-        d["row_id"] = uuid_to_str(self.access_profile.row.id)
+        d["row_id"] = serialize_uuid(self.access_profile.row.id)
         d.pop("access_profile")
         return d

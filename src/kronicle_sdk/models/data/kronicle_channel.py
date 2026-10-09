@@ -21,7 +21,7 @@ from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 from kronicle_sdk.utils.dict_utils import remove_alt_field
-from kronicle_sdk.utils.str_utils import tiny_id, uuid_to_str
+from kronicle_sdk.utils.str_utils import serialize_uuid
 
 mod = "KronicleChannel"
 
@@ -203,7 +203,7 @@ class KronicleChannel(KronicleRbacBase):
         if not flatten:
             return d
         if self.zone:
-            d["zone_id"] = uuid_to_str(self.zone.ensure_has_id())
+            d["zone_id"] = serialize_uuid(self.zone.ensure_has_id())
             d["zone_name"] = self.zone.name
         d.pop("zone", None)
         return d
@@ -239,6 +239,8 @@ class KronicleChannel(KronicleRbacBase):
 
 
 if __name__ == "__main__":  # pragma: no cover
+    from kronicle_sdk.utils.str_utils import tiny_id
+
     tag = tiny_id()
     channel = KronicleChannel(
         name=f"test_channel_{tag}",

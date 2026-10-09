@@ -195,6 +195,6 @@ class TestKronicleRowPolicy:
         row = _row(7)
         p = KronicleRowPolicy(subject=_user_subject(), access_profile=KronicleRowAccess(role=_role(), row=row))
         flat = p.flatten()
-        # NOTE: KronicleRow.id is an int, so uuid_to_str passes it through unchanged.
+        # NOTE: KronicleRow.id is an int, so serialize_uuid passes it through unchanged.
         assert flat["row_id"] == 7
         assert "access_profile" not in flat

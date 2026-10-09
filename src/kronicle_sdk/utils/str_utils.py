@@ -24,7 +24,7 @@ def slash_join(*args) -> str:
         if frag is None or frag == "":
             pass
         elif not isinstance(frag, str):
-            raise AttributeError("input parameters must be strings")
+            raise TypeError("input parameters must be strings")
         else:
             non_null_args.append(frag.strip("/"))
     joined_str = "/".join(non_null_args)
@@ -45,11 +45,21 @@ def uuid4_str() -> str:
     return str(uuid4())
 
 
-def uuid_to_str(v: Any) -> Any:
+def serialize_uuid(v: Any) -> Any:
+    """Serialize UUID-bearing values for request/response bodies.
+
+    Convention: UUIDs inside serialized bodies use the compact ``.hex`` form
+    (no dashes); the dashed ``str(uuid)`` form is reserved for URL paths/routes
+    (see :func:`check_is_uuid4`).
+
+    This is a serializer, not a validator. A value that is already a ``str``
+    (or any non-UUID, non-dict) passes through unchanged; malformed ids are
+    rejected earlier, at the model's ``id`` validator.
+    """
     if isinstance(v, UUID):
         return v.hex
     if isinstance(v, dict):
-        return {k: uuid_to_str(v) for k, v in v.items()}
+        return {k: serialize_uuid(val) for k, val in v.items()}
     return v
 
 
@@ -58,7 +68,7 @@ def serialize(x: Any, *, exclude_none: bool = True) -> Any:
         return x
     if isinstance(x, UUID):
         return x.hex
-    if exclude_none and not x and isinstance(x, (list, dict, set, str)):
+    if exclude_none and not x and isinstance(x, (list, dict, set, tuple, str)):
         return None
     if isinstance(x, (list, tuple, set)):
         if (tx := type(x)) is set:
@@ -91,9 +101,8 @@ def is_uuid_v4(id: str | UUID) -> bool:
     if id is None or not isinstance(id, (str, UUID)):
         return False
     try:
-        uuid4 = UUID(str(id))
-        return True if uuid4.version == 4 else False
-    except ValueError:
+        return UUID(str(id)).version == 4
+    except Exception:
         return False
 
 
@@ -117,7 +126,7 @@ def ensure_uuid4(id) -> UUID:
     except Exception as e:
         raise ValueError(f"Invalid UUID format: {id}") from e
     if uid.version != 4:
-        raise ValueError(f"channel_id must be a UUIDv4, got v{uid.version}")
+        raise ValueError(f"Expected UUID v4, got UUID v{uid.version}")
     return uid
 
 
@@ -149,9 +158,11 @@ def normalize_name(
     Raises ValueError for empty/invalid names. Dots are preserved when
     keep_dots is True (used by `col`/`any` dotted filters).
     """
+    if s is None:
+        raise ValueError("A name should be provided")
     if not isinstance(s, str):
-        raise TypeError("Name should be a string")
-    if s is None or len(s) < 1:
+        raise TypeError(f"Name should be a string, got {get_type(s)}")
+    if not s:
         raise ValueError("Name cannot be empty")
     try:
         if keep_dots:
@@ -200,6 +211,8 @@ def normalize_column_name(s: str) -> str:
     s = sub(r"_+", "_", s)
     # Strip leading/trailing underscores
     s = s.strip("_")
+    if len(s) < 1:
+        raise ValueError("Name is invalid")
     if s[0].isdigit():
         # Prefix if starting with digit
         s = "col_" + s
@@ -290,3 +303,6 @@ if __name__ == "__main__":  # pragma: no cover
     print(here, "serialize tuple", serialize(t))
     print(here, "serialize dict", serialize(d))
     print(here, "serialize dict", dumps(serialize(d, exclude_none=False)))
+
+    for e in ["z", 1, 1.2, True, Any, type, (), [], {}]:
+        print(here, "get_type", e, "->", get_type(e))

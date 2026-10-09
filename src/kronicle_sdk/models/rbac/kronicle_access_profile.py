@@ -5,7 +5,7 @@ from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_role import KronicleRole
 from kronicle_sdk.models.rbac.kronicle_row import KronicleRow
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
-from kronicle_sdk.utils.str_utils import uuid_to_str
+from kronicle_sdk.utils.str_utils import serialize_uuid
 
 
 class KronicleAccessProfile(KronicleRbacBase):
@@ -26,7 +26,7 @@ class KronicleAccessProfile(KronicleRbacBase):
         d = super().model_dump(*args, mode=mode, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["role_id"] = uuid_to_str(self.role.ensure_has_id())
+        d["role_id"] = serialize_uuid(self.role.ensure_has_id())
         d["role_name"] = self.role.name
         d.pop("role")
         return d
@@ -46,7 +46,7 @@ class KronicleZoneAccess(KronicleAccessProfile):
         d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["zone_id"] = uuid_to_str(self.zone.ensure_has_id())
+        d["zone_id"] = serialize_uuid(self.zone.ensure_has_id())
         d["zone_name"] = self.zone.name
         d.pop("zone")
         return d
@@ -66,7 +66,7 @@ class KronicleChannelAccess(KronicleAccessProfile):
         d = super().model_dump(*args, mode=mode, flatten=flatten, exclude_none=exclude_none, **kwargs)
         if not flatten:
             return d
-        d["id"] = uuid_to_str(self.channel.ensure_has_id())
+        d["id"] = serialize_uuid(self.channel.ensure_has_id())
         d["channel_name"] = self.channel.name
         d.pop("channel")
         return d

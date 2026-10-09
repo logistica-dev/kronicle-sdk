@@ -196,8 +196,8 @@ class KronicleAbstractConnector(ABC):
             log_e(here, "KronicleHTTPError", f"{e}")
             raise
         except Exception as e:
-            log_e(here, "type(exc)", type(e).__name__, e)
-            log_d(here, "Request failed", method_str, url, "<=", type(e), e)
+            log_e(here, "type(exc)", get_type(e), e)
+            log_d(here, "Request failed", method_str, url, "<=", get_type(e), e)
             raise
         return self._parse(response=response, strict=strict)
 
@@ -246,7 +246,7 @@ class KronicleAbstractConnector(ABC):
             return KronicleChannel.from_json(body)
         if isinstance(body, KronicleChannel):
             return body
-        raise KronicleOperationError(f"Expected a KronicleChannel, got a {type(body).__name__}")
+        raise KronicleOperationError(f"Expected a KronicleChannel, got a {get_type(body)}")
 
     def _ensure_kronicle_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
         if isinstance(body, KronicleChannel):
@@ -255,7 +255,7 @@ class KronicleAbstractConnector(ABC):
 
     def _ensure_payload_id(self, body: KronicleChannel | dict) -> str:
         here = "abc_connector._ensure_payload_id"
-        log_d(here, "type(body)", type(body).__name__)
+        log_d(here, "type(body)", get_type(body))
         log_d(here, "body", body)
         payload = self._ensure_kronicle_channel(body)
         log_d(here, "KronicleChannel", payload)

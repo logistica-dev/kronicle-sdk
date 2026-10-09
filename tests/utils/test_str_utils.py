@@ -28,12 +28,12 @@ from kronicle_sdk.utils.str_utils import (
     pad_b64_str,
     param_dict_to_str,
     serialize,
+    serialize_uuid,
     slash_join,
     split_strip,
     strip_quotes,
     tiny_id,
     uuid4_str,
-    uuid_to_str,
     validate_orcid,
 )
 
@@ -69,7 +69,7 @@ class TestSlashJoin:
         assert slash_join() == ""
 
     def test_non_string_raises(self):
-        with pytest.raises(AttributeError, match="input parameters must be strings"):
+        with pytest.raises(TypeError, match="input parameters must be strings"):
             slash_join("a", 42)
 
 
@@ -106,23 +106,28 @@ class TestUuidHelpers:
 
     @pytest.mark.parametrize("value", [42, None])
     def test_scalar_passthrough(self, value):
-        assert uuid_to_str(value) == value
+        assert serialize_uuid(value) == value
+
+    @pytest.mark.parametrize("value", ["not-a-uuid", "8c813912-28cf-41d4-a9a4-6d9be47dbb07"])
+    def test_string_passthrough(self, value):
+        # Serializer, not validator: strings (even UUID-shaped) come back verbatim.
+        assert serialize_uuid(value) == value
 
     def test_uuid_becomes_hex(self):
         u = uuid4()
-        assert uuid_to_str(u) == u.hex
+        assert serialize_uuid(u) == u.hex
 
-    def test_uuid_to_str_recurses_into_dicts(self):
+    def test_serialize_uuid_recurses_into_dicts(self):
         u = uuid4()
-        assert uuid_to_str({"id": u, "nested": {"id": u}, "n": 1}) == {
+        assert serialize_uuid({"id": u, "nested": {"id": u}, "n": 1}) == {
             "id": u.hex,
             "nested": {"id": u.hex},
             "n": 1,
         }
 
-    def test_uuid_to_str_leaves_lists_untouched(self):
+    def test_serialize_uuid_leaves_lists_untouched(self):
         u = uuid4()
-        assert uuid_to_str([u]) == [u]
+        assert serialize_uuid([u]) == [u]
 
 
 class TestIsUuidV4:
@@ -168,7 +173,7 @@ class TestEnsureUuid4:
             ensure_uuid4("not-a-uuid")
 
     def test_wrong_version_raises(self):
-        with pytest.raises(ValueError, match="must be a UUIDv4"):
+        with pytest.raises(ValueError, match="Expected UUID v4"):
             ensure_uuid4(uuid1())
 
 
@@ -241,7 +246,12 @@ class TestNormalizeName:
         with pytest.raises(ValueError):
             normalize_name(bad)
 
-    @pytest.mark.parametrize("bad", [None, 123, ["a"]])
+    @pytest.mark.parametrize("bad", [None])
+    def test_none_raises_value_error(self, bad):
+        with pytest.raises(ValueError, match="A name should be provided"):
+            normalize_name(bad)
+
+    @pytest.mark.parametrize("bad", [123, ["a"]])
     def test_non_string_raises_type_error(self, bad):
         with pytest.raises(TypeError, match="Name should be a string"):
             normalize_name(bad)
@@ -300,10 +310,10 @@ class TestNormalizeColumnName:
         assert re.fullmatch(r"col_[a-z0-9]{8}", normalize_column_name(""))
 
     @pytest.mark.parametrize("raw", ["_", "!!!", " "])
-    def test_input_normalizing_to_empty_raises_index_error(self, raw):
-        # Known gap: only the empty *input* is special-cased. Input that is
-        # non-empty but normalizes to "" still hits `s[0]` on line 207.
-        with pytest.raises(IndexError):
+    def test_input_normalizing_to_empty_raises(self, raw):
+        # Non-empty input that normalizes to "" is rejected (unlike the empty
+        # *input* case above, which is special-cased into a random name).
+        with pytest.raises(ValueError, match="Name is invalid"):
             normalize_column_name(raw)
 
 

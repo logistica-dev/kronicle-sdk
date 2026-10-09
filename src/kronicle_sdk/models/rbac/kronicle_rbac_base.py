@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 
-from kronicle_sdk.utils.str_utils import ensure_uuid4, serialize
+from kronicle_sdk.utils.str_utils import ensure_uuid4, get_type, serialize
 
 T = TypeVar("T")
 
@@ -65,7 +65,7 @@ class KronicleRbacBase(BaseModel):
         fabricating an id.
         """
         if self.id is None:
-            raise ValueError(f"{type(self).__name__} has no id (not persisted?)")
+            raise ValueError(f"Object {get_type(self)} has no id (not persisted?)")
         return self.id
 
     def model_dump(self, *args, mode="json", exclude_none=True, **kwargs) -> dict:
