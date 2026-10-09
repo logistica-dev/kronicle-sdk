@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from ast import TypeVar
 from json import dumps
 from typing import Any, ClassVar, Self
 from uuid import UUID
@@ -9,8 +8,6 @@ from uuid import UUID
 from pydantic import BaseModel, field_validator
 
 from kronicle_sdk.utils.str_utils import ensure_uuid4, get_type, serialize
-
-T = TypeVar("T")
 
 _MAX_DETAILS_JSON_SIZE = 64 * 1024  # 64KB, matching kronicle's server InputSchema
 

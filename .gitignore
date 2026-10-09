@@ -11,6 +11,7 @@ uv.lock
 **/__pycache__
 .idea
 venv
+.venv
 pyvenv.cfg
 bin
 include

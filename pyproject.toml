@@ -24,7 +24,6 @@ keywords = ["Kronicle", "Kronicle SDK", "Univ. Rennes", "IRISA"]
 dependencies = ["requests>=2.34.2", "pydantic[email]>=2.14.0"]
 [dependency-groups]
 dev = [
-    "bandit>=1.9.4",
     "black>=26.10.0",
     "commitizen>=4.19.2",
     "pre-commit>=4.6.2",
@@ -32,7 +31,15 @@ dev = [
     "ruff>=0.16.10",
     "uv-bump>=0.6.0",
 ]
-test = ["ipykernel>=7.4.0", "pytest-cov>=7.1.0", "pytest>=9.1.1"]
+test = [
+    "bandit>=1.9.4",
+    "black[jupyter]>=26.10.0",
+    "ipykernel>=7.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest>=9.1.1",
+    "tox-uv>=1.36.1",
+    "tox>=4.64.10",
+]
 build = ["setuptools>=84.0.0", "wheel>=0.48.0"]
 
 [project.urls]
@@ -57,7 +64,6 @@ target-version = ['py311', 'py312', 'py313', 'py314']
 # ----- Tool: bandit
 [tool.bandit]
 exclude_dirs = ["tests", "build", ".venv"]
-skips = ["B101"]                           # skip assert warnings
 targets = ["src"]
 
 # ----- Tool: commitizen
@@ -105,12 +111,49 @@ verboseOutput = true
 [tool.ruff]
 # match Black
 line-length = 120
-# auto-fix issues (imports, unused vars)
-fix = true
-# common codes: E/F=flake8, I=imports, B=bugs, C=complexity
-# line length handled by Black
 exclude = ["**/.venv", "**/__pycache__", "**/.env"]
 
 [tool.ruff.lint]
+# common codes: E/F=flake8, I=imports, B=bugs, C=complexity
 select = ["E", "F", "I", "B", "C"]
 ignore = ["E501"]
+
+# ----- Tool: tox
+# Single source of truth for the checks run locally and in CI:
+#   uv run tox            # all environments, serial
+#   uv run tox -e py312   # one environment
+[tool.tox]
+env_list = ["py311", "py312", "py313", "py314", "quality"]
+skip_missing_interpreters = false
+
+[tool.tox.env_run_base]
+runner = "uv-venv-lock-runner"
+dependency_groups = ["test"]
+commands = [["pytest", "-q", "-p", "no:cacheprovider"]]
+
+[tool.tox.env.quality]
+base_python = ["python3.12"]
+dependency_groups = ["dev", "test"]
+commands = [
+    [
+        "ruff",
+        "check",
+        "--no-fix",
+    ],
+    [
+        "black",
+        "--check",
+        "--diff",
+        ".",
+    ],
+    [
+        "pyright",
+    ],
+    [
+        "bandit",
+        "-c",
+        "pyproject.toml",
+        "-r",
+        "src",
+    ],
+]

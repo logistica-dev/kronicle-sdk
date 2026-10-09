@@ -204,7 +204,8 @@ def normalize_to_snake_case(s: str) -> str:
 def normalize_column_name(s: str) -> str:
     if not s:
         # Generate 8-character random name
-        return "col_" + "".join(choices(ascii_lowercase + digits, k=8))  # nosec B311 - not used for security
+        # not used for security
+        return "col_" + "".join(choices(ascii_lowercase + digits, k=8))  # nosec B311
     # Basic normalization
     s = normalize_to_snake_case(s)
     # Optionally: collapse multiple underscores

@@ -270,7 +270,8 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         """
         params = filter.to_params() if filter else None
         result = self.get(route=f"channels/{check_is_uuid4(id)}/columns", params=params)
-        assert isinstance(result, KronicleChannel)
+        if not isinstance(result, KronicleChannel):
+            raise TypeError(f"Expected KronicleChannel, got {type(result).__name__}")  # pragma: no cover
 
         match return_type:
             case "str":

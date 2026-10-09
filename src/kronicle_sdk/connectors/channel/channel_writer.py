@@ -1,6 +1,6 @@
 # kronicle/connectors/channel/kronicle_writer.py
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from kronicle_sdk.conf.read_conf import Settings
 from kronicle_sdk.connectors.abc_connector import KronicleOperationError
@@ -37,7 +37,7 @@ class KronicleWriter(KronicleAbstractChannelConnector):
         if not zone_id and payload.zone:
             zone_id = payload.zone.id
         if not zone_id:
-            raise ValueError("zone_id is required to create a channel")
+            raise ValueError("'zone_id' is required to create a channel")
         zone_id = ensure_uuid4(zone_id)
         # log_d("T create_channel", payload)
         if existing := self.get_channel(payload):
@@ -48,8 +48,10 @@ class KronicleWriter(KronicleAbstractChannelConnector):
                 f"Channel {existing.name} [{existing.id}] already exists in zone "
                 f"{existing.zone.id if existing.zone else 'unknown'}, not {zone_id}"
             )
-        existing = self.post(route=f"zones/{zone_id}/channels", body=payload)
-        return self._to_kronicle_channel(existing)
+        if payload.id is None:
+            payload.id = uuid4()
+        created = self.post(route=f"zones/{zone_id}/channels", body=payload)
+        return self._to_kronicle_channel(created)
 
     def patch_channel(self, body: KronicleChannel | dict) -> KronicleChannel:
         """Patch an existing channel with the given fields.
@@ -99,13 +101,13 @@ if __name__ == "__main__":  # pragma: no cover
             kronicle_writer.get_channel_by_id(max_chan_id),
         )
         rows = kronicle_writer.get_rows_for_channel(max_chan_id)
-        assert isinstance(rows, list)
+        assert isinstance(rows, list)  # nosec B101
         for i, row in enumerate(rows):
             log_d(here, f"row {i}", row)
         log_d(here, "nb rows", len(rows))
 
         cols = kronicle_writer.get_cols_for_channel(max_chan_id)
-        assert isinstance(cols, dict)
+        assert isinstance(cols, dict)  # nosec B101
         log_d(here, "cols", cols)
 
     channel_id = uuid4_str()
