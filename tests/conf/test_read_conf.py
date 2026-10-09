@@ -8,12 +8,14 @@ import pytest
 from kronicle_sdk.conf.env_keys import (
     KRONICLE_HOST,
     KRONICLE_PORT,
+    KRONICLE_SU_CREDS,
     KRONICLE_SU_NAME,
     KRONICLE_SU_PASS,
     KRONICLE_USR_NAME,
     KRONICLE_USR_PASS,
 )
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings, get_conf
+from kronicle_sdk.utils.str_utils import encode_b64url
 
 
 class TestConnectionInformation:
@@ -46,6 +48,33 @@ def no_su_env(monkeypatch):
     monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
     monkeypatch.delenv(KRONICLE_SU_NAME, raising=False)
     monkeypatch.delenv(KRONICLE_SU_PASS, raising=False)
+
+
+ALL_KRONICLE_KEYS = (
+    KRONICLE_HOST,
+    KRONICLE_PORT,
+    KRONICLE_USR_NAME,
+    KRONICLE_USR_PASS,
+    KRONICLE_SU_NAME,
+    KRONICLE_SU_PASS,
+    KRONICLE_SU_CREDS,
+)
+
+
+@pytest.fixture
+def clean_env(monkeypatch):
+    """Remove every KRONICLE_* key so ambient env cannot leak into the test."""
+    for key in ALL_KRONICLE_KEYS:
+        monkeypatch.delenv(key, raising=False)
+
+
+@pytest.fixture
+def base_env(clean_env, monkeypatch):
+    """Connection info from ENV, with every superuser key cleared."""
+    monkeypatch.setenv(KRONICLE_HOST, "envhost")
+    monkeypatch.setenv(KRONICLE_PORT, "1234")
+    monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+    monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
 
 
 class TestSettings:
@@ -152,6 +181,63 @@ class TestSettings:
         assert s.get_setting(env="NON_EXISTENT") is None
         with pytest.raises(RuntimeError):
             s.get_setting(env="NON_EXISTENT", param="missing")
+
+    def test_missing_host_with_port_raises(self, monkeypatch):
+        # port set but no host: the localhost default does not kick in
+        monkeypatch.delenv(KRONICLE_HOST, raising=False)
+        monkeypatch.setenv(KRONICLE_PORT, "8000")
+        monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+        monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
+        with pytest.raises(RuntimeError, match="Host not provided"):
+            Settings(None)
+
+    def test_get_setting_empty_conf_value_returns_default(self, base_env):
+        s = Settings(None)
+        conf_parser = ConfigParser()
+        conf_parser["kronicle"] = {"host": ""}
+        s._conf = conf_parser
+        s._section = "kronicle"
+        assert s.get_setting(env="NON_EXISTENT_ENV", param="host", default="fallback") == "fallback"
+        assert s.get_setting(env="NON_EXISTENT_ENV", param="host") is None
+
+
+class TestSuperUserCredentials:
+    def test_from_b64_usr_pwd(self, base_env, monkeypatch):
+        monkeypatch.setenv(KRONICLE_SU_CREDS, encode_b64url("b64user:b64pass"))
+        s = Settings(None)
+        assert s.connection_su is not None
+        assert s.connection_su.host == "envhost"
+        assert s.connection_su.port == 1234
+        assert s.connection_su.usr == "b64user"
+        assert s.connection_su.pwd == "b64pass"
+
+    def test_invalid_b64_returns_none(self, base_env, monkeypatch):
+        monkeypatch.setenv(KRONICLE_SU_CREDS, "not_valid!!")
+        s = Settings(None)
+        assert s.connection_su is None
+
+    def test_missing_colon_returns_none(self, base_env, monkeypatch):
+        monkeypatch.setenv(KRONICLE_SU_CREDS, encode_b64url("nocolon"))
+        s = Settings(None)
+        assert s.connection_su is None
+
+    @patch("kronicle_sdk.conf.read_conf.is_file", return_value=True)
+    def test_su_options_missing_from_conf_fall_back(self, mock_is_file, clean_env):
+        # No su_username/su_password/su_creds options: both lookups raise and
+        # are swallowed, leaving no superuser connection.
+        conf_parser = ConfigParser()
+        conf_parser["kronicle"] = {
+            "host": "filehost",
+            "port": "4321",
+            "username": "fileuser",
+            "password": "filepass",
+        }
+        with patch("kronicle_sdk.conf.read_conf.read_ini_conf", return_value=conf_parser):
+            s = Settings("./somefile.ini")
+        assert s.connection.host == "filehost"
+        assert s.connection.port == 4321
+        assert s.connection.usr == "fileuser"
+        assert s.connection_su is None
 
 
 def test_get_conf_factory(monkeypatch):

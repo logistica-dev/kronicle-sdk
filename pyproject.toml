@@ -21,26 +21,19 @@ classifiers = [
 keywords = ["Kronicle", "Kronicle SDK", "Univ. Rennes", "IRISA"]
 
 # ------ Dependencies
-dependencies = [
-    "requests>=2.34.2",
- "pydantic[email]>=2.13.5",
-]
+dependencies = ["requests>=2.34.2", "pydantic[email]>=2.14.0"]
 [dependency-groups]
-build = ["setuptools>=84.0.0", "wheel>=0.48.0"]
 dev = [
     "bandit>=1.9.4",
     "black>=26.10.0",
-    "commitizen>=4.19.1",
+    "commitizen>=4.19.2",
     "pre-commit>=4.6.2",
     "pyright>=1.1.414",
     "ruff>=0.16.10",
     "uv-bump>=0.6.0",
 ]
 test = ["ipykernel>=7.4.0", "pytest-cov>=7.1.0", "pytest>=9.1.1"]
-
-# ----- Tool: uv
-[tool.uv]
-default-groups = ["dev", "test"]
+build = ["setuptools>=84.0.0", "wheel>=0.48.0"]
 
 [project.urls]
 Homepage = "https://github.com/logistica-dev/kronicle-sdk"
@@ -51,6 +44,10 @@ Repository = "https://github.com/logistica-dev/kronicle-sdk"
 [build-system]
 requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
+
+# ----- Tool: uv
+[tool.uv]
+default-groups = ["dev", "test"]
 
 # ----- Tool: black
 [tool.black]
