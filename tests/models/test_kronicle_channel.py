@@ -4,8 +4,10 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from kronicle_sdk.models.data.kronicle_channel import KronicleChannel
+from kronicle_sdk.models.data.kronicle_column_metadata import KronicleColumnMetadata
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
 
 
@@ -83,6 +85,58 @@ class TestNormalizeTags:
         c = KronicleChannel(tags={"t": datetime(2025, 1, 1), "d": None})  # type: ignore
         assert c.tags is not None
         assert set(c.tags) == {"t"}
+
+
+class TestColumnMetadata:
+    def test_default_is_none(self):
+        assert KronicleChannel().column_metadata is None
+
+    def test_explicit_none_is_kept(self):
+        assert KronicleChannel(column_metadata=None).column_metadata is None
+
+    def test_non_dict_field_raises(self):
+        with pytest.raises(ValidationError):
+            KronicleChannel(column_metadata="nope")  # type: ignore[arg-type]
+
+    def test_none_omitted_from_dump(self):
+        assert "column_metadata" not in KronicleChannel(name="test.chan").model_dump()
+
+    def test_raw_dict_values_are_coerced(self):
+        c = KronicleChannel(column_metadata={"temperature": {"unit": "Cel"}})
+        assert c.column_metadata is not None
+        entry = c.column_metadata["temperature"]
+        assert isinstance(entry, KronicleColumnMetadata)
+        assert entry.unit == "Cel"
+
+    def test_model_values_are_kept(self):
+        cm = KronicleColumnMetadata(unit="Cel")
+        c = KronicleChannel(column_metadata={"temperature": cm})
+        assert c.column_metadata is not None
+        assert c.column_metadata["temperature"] is cm
+
+    def test_malformed_value_raises(self):
+        with pytest.raises(ValidationError):
+            KronicleChannel(column_metadata={"temperature": {"unit": 123}})  # type: ignore[dict-item]
+
+    def test_non_dict_value_raises(self):
+        with pytest.raises(ValidationError):
+            KronicleChannel(column_metadata={"temperature": "not-a-dict"})  # type: ignore[dict-item]
+
+    def test_dump_keeps_values_and_drops_unset_known_keys(self):
+        c = KronicleChannel(column_metadata={"temperature": {"unit": "Cel"}})
+        assert c.model_dump()["column_metadata"] == {"temperature": {"unit": "Cel"}}
+
+    def test_dump_preserves_extras(self):
+        c = KronicleChannel(column_metadata={"temperature": {"unit": "Cel", "precision": 2}})
+        assert c.model_dump()["column_metadata"] == {"temperature": {"unit": "Cel", "precision": 2}}
+
+    def test_empty_column_metadata_is_dropped_from_dump(self):
+        assert "column_metadata" not in KronicleChannel(column_metadata={}).model_dump()
+
+    def test_from_json_parses_response(self):
+        c = KronicleChannel.from_json({"column_metadata": {"temperature": {"unit": "Cel"}}})
+        assert c.column_metadata is not None
+        assert isinstance(c.column_metadata["temperature"], KronicleColumnMetadata)
 
 
 class TestConstructors:

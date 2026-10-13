@@ -17,6 +17,7 @@ from typing import Any
 from pydantic import field_validator, model_validator
 
 from kronicle_sdk.models.data.kronicable_type import STR_TYPES, KronicableTypeChecker
+from kronicle_sdk.models.data.kronicle_column_metadata import ColumnMetadataInput, KronicleColumnMetadata
 from kronicle_sdk.models.iso_datetime import IsoDateTime
 from kronicle_sdk.models.rbac.kronicle_rbac_base import KronicleRbacBase
 from kronicle_sdk.models.rbac.kronicle_zone import KronicleZone
@@ -46,6 +47,10 @@ class KronicleChannel(KronicleRbacBase):
         Arbitrary metadata attached to the channel.
     tags : dict[str, str | int | float | list] | None
         Tag set used for filtering and grouping channels.
+    column_metadata : dict[str, KronicleColumnMetadata | dict[str, Any]] | None
+        Per-column annotations (unit, description, ontology, ...), keyed by the
+        normalized DB column name. Values may be raw dicts (coerced to
+        ``KronicleColumnMetadata``). Descriptive only; never affects the schema.
     rows : list[dict[str, Any]] | None
         Row-oriented data, usually raw samples as received.
     columns : dict[str, list] | None
@@ -53,7 +58,7 @@ class KronicleChannel(KronicleRbacBase):
         Each key is a column name; each value is the list of values for that column.
     received_at : IsoDateTime | None
         Timestamp (server-side) for when the payload was created or returned.
-    available_data : int | None
+    available_rows : int | None
         Count or size of available data points for this channel.
     op_status : str | None
         Operation status returned by write/update operations.
@@ -61,17 +66,22 @@ class KronicleChannel(KronicleRbacBase):
         Optional details attached to the operation result.
     """
 
+    zone: KronicleZone | None = None
+
     channel_schema: dict[str, str] | None = None
+    column_metadata: dict[str, ColumnMetadataInput] | None = None
+
     metadata: dict[str, Any] | None = None
     tags: dict[str, str | int | float | bool | list | datetime] | None = None
+
     rows: list[dict[str, Any]] | None = None
     columns: dict[str, list] | None = None
+
     received_at: IsoDateTime | None = None
-    available_data: int | None = None
+    available_rows: int | None = None
+
     op_status: str | None = None
     op_details: dict[str, Any] | None = None
-    available_rows: int | None = None
-    zone: KronicleZone | None = None
 
     # ----------------------------------------------------------------------------------------------
     # Validators
@@ -162,6 +172,29 @@ class KronicleChannel(KronicleRbacBase):
 
         return normalized_tags
 
+    @field_validator("column_metadata", mode="before")
+    @classmethod
+    def coerce_column_metadata(cls, value):
+        """Coerce each raw ``dict`` entry into a ``KronicleColumnMetadata``.
+
+        The field annotation accepts ``KronicleColumnMetadata | dict[str, Any]``
+        so callers can pass plain dicts inline. We coerce explicitly (rather than
+        relying on pydantic's union ordering) so a malformed entry raises here
+        instead of being silently kept as a raw dict.
+        """
+        if not isinstance(value, dict):
+            return value  # None or invalid -> let the field validators decide
+
+        coerced: dict[str, Any] = {}
+        for column, entry in value.items():
+            if isinstance(entry, KronicleColumnMetadata):
+                coerced[column] = entry
+            elif isinstance(entry, dict):
+                coerced[column] = KronicleColumnMetadata(**entry)
+            else:
+                coerced[column] = entry  # let the field annotation reject it
+        return coerced
+
     # ----------------------------------------------------------------------------------------------
     # Constructors
     # ----------------------------------------------------------------------------------------------
@@ -251,5 +284,6 @@ if __name__ == "__main__":  # pragma: no cover
         ],
         metadata={"source": "integration-test"},
         tags={"test": True},
+        column_metadata={"value": {"unit": "Cel", "description": "Measured value"}},
     )
     print(channel)
