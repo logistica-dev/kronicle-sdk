@@ -59,7 +59,7 @@ class KronicleChannel(KronicleRbacBase):
     received_at : IsoDateTime | None
         Timestamp (server-side) for when the payload was created or returned.
     available_rows : int | None
-        Count or size of available data points for this channel.
+        Number of rows stored for this channel (None if unknown).
     op_status : str | None
         Operation status returned by write/update operations.
     op_details : dict[str, Any] | None

@@ -1,6 +1,6 @@
 [project]
 name = "kronicle-sdk"
-version = "0.4.4"
+version = "0.5.0"
 description = "SDK to read and write data on a Kronicle microservice"
 authors = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -26,7 +26,7 @@ dependencies = ["requests>=2.34.2", "pydantic[email]>=2.14.1"]
 dev = [
     "black>=26.10.1",
     "commitizen>=4.19.2",
-    "pre-commit>=4.6.2",
+    "pre-commit>=4.7.0",
     "pyright>=1.1.414",
     "ruff>=0.17.0",
     "uv-bump>=0.6.0",
