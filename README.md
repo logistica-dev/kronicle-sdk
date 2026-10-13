@@ -1,22 +1,23 @@
 # Kronicle SDK
 
-Python-based Software Development Kit to fetch and push information to a Kronicle.
+[![CI](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
+[![python](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fbadges%2Fpython.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fbadges%2Fcoverage.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
 
-examples in [README.ipynb](README.ipynb)
+Python-based Software Development Kit to fetch information from and push data to a [Kronicle server](https://github.com/logistica-dev/kronicle).
 
-# use in an other project
+## Install
 
-```bash
+```sh
 pip install kronicle-sdk
-
-# pip install kronicle-sdk[pandas]
-
 ```
 
-Then
+## Import
 
-```python
-from kronicle import KronicleWriter
+```py
+from kronicle_sdk.connectors.channel.channel_writer import KronicleWriter
 ```
 
-should work.
+## Usage
+
+See usage examples in [README.ipynb](https://github.com/logistica-dev/kronicle-sdk/blob/58c600e0d83b59891a6004b39a5b4672733b72a1/README.ipynb)

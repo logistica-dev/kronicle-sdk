@@ -14,6 +14,10 @@ permissions:
   contents: read
 
 jobs:
+  # Single job, as before: [tool.tox].env_list is the one source of truth for
+  # what runs, and ./test-matrix.sh is unchanged. The addition is tox's own
+  # journal (--result-json), which records each environment's result
+  # individually — that is what the python-versions badge reports.
   tox:
     name: tox
     runs-on: ubuntu-latest
@@ -30,6 +34,52 @@ jobs:
 
       # --locked fails if uv.lock is stale (same guarantee locally). It also
       # populates .venv, which [tool.pyright] venv/venvPath resolve against.
-      # tox (via tox-uv) provisions the 3.11-3.14 interpreters for the matrix.
+      # tox (via tox-uv) provisions the 3.11-3.14 interpreters. run-parallel is
+      # safe because only one env instruments coverage, so a single process
+      # writes reports/coverage.xml (see [tool.tox.env_run_base]). The journal is
+      # written even on failure (tox writes it from a finally block), so the
+      # badge can say which interpreter broke.
       - name: Run tox
-        run: uv run --locked tox
+        run: uv run --locked tox run-parallel --result-json tox.json
+
+      # Keep this job read-only: it runs the tests and only turns the results
+      # into badge payloads. Publishing happens in the privileged job below.
+      - name: Generate badge payloads
+        if: always()
+        run: python3 .github/scripts/make_badges.py tox.json reports/coverage.xml badges
+
+      - name: Upload badge payloads
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: badges
+          path: badges
+
+  # Publishes the payloads to the branch the README badges read. Push-to-main
+  # only: a PR must not rewrite the published badges. `!cancelled()` rather than
+  # success() so a failing run can publish the red badge it is meant to publish.
+  badges:
+    name: badges
+    needs: [tox]
+    if: ${{ !cancelled() && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download badge payloads
+        uses: actions/download-artifact@v8
+        with:
+          name: badges
+          path: badges
+
+      # gh-pages holds generated data only, so each run replaces its history
+      # with a single commit (force-push) instead of accumulating merge noise.
+      - name: Publish to gh-pages
+        run: |
+          cd badges
+          git init -q -b gh-pages
+          git add .
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -qm 'chore: update badges [skip ci]'
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
