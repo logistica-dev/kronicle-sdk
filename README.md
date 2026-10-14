@@ -1,8 +1,8 @@
 # Kronicle SDK
 
 [![CI](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
-[![python](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fbadges%2Fpython.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fbadges%2Fcoverage.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
+[![python](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fpython.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Flogistica-dev%2Fkronicle-sdk%2Fgh-pages%2Fcoverage.json)](https://github.com/logistica-dev/kronicle-sdk/actions/workflows/ci.yml)
 
 Python-based Software Development Kit to fetch information from and push data to a [Kronicle server](https://github.com/logistica-dev/kronicle).
 

@@ -44,4 +44,8 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.7.15 # match local uv? or latest
+    hooks:
+      - id: uv-lock
   # NOTE: commitizen-branch (pre-push version bump) removed — uv-bump now owns versioning.
