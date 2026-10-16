@@ -1,8 +1,16 @@
-from configparser import ConfigParser, ExtendedInterpolation
-from os import environ
+from configparser import ConfigParser, ExtendedInterpolation, NoOptionError, NoSectionError
+from os import environ, getenv
 from pathlib import Path
+from typing import Any
 
-from kronicle_sdk.utils.file_utils import check_is_file
+from kronicle_sdk.conf.env_keys import KRONICLE_SDK_CONF
+from kronicle_sdk.utils.file_utils import check_is_file, is_file
+
+
+def read_conf_file():
+    ini_file = getenv(KRONICLE_SDK_CONF, "./conf/config.ini")
+    if ini_file and is_file(ini_file):
+        return read_ini_conf(ini_file)
 
 
 def read_ini_conf(file_path) -> ConfigParser:
@@ -52,3 +60,36 @@ def load_env(file_path: str = ".env", override: bool = False):
             if override or key not in environ:
                 environ[key] = str(typed_value)  # os.environ must stay str
     return env_vars
+
+
+def get_setting(
+    *,
+    env: str | None = None,
+    conf: ConfigParser | None = None,
+    section: str | None = None,
+    param: str | None = None,
+    default: Any | None = None,
+):
+    """
+    Retrieve a setting from an environment variable or, alternatively, an ini file.
+    If both are set, values from ENV are preferred.
+    """
+    if env:
+        env_val = getenv(env.upper())
+        if env_val is not None:
+            # logger(here, "Extracted from environment variables:", env)
+            return env_val
+    if conf and section and param:
+        try:
+            conf_val = conf.get(section.lower(), param.lower())
+        except NoSectionError as e:
+            if default is None:
+                raise RuntimeError(f"Missing config section '{section}'") from e
+            return default
+        except NoOptionError as e:
+            if default is None:
+                raise RuntimeError(f"Missing '{param}' in config section '{section}'") from e
+            return default
+        if conf_val:
+            return conf_val
+    return default

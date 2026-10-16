@@ -1,9 +1,10 @@
 # tests/utils/test_conf_utils.py
+from configparser import ConfigParser
 from os import environ
 
 import pytest
 
-from kronicle_sdk.utils.conf_utils import load_env, parse_value, read_ini_conf
+from kronicle_sdk.utils.conf_utils import get_setting, load_env, parse_value, read_ini_conf
 
 
 class TestParseValue:
@@ -103,3 +104,47 @@ class TestLoadEnv:
 
         load_env(str(env_file), override=True)
         assert environ["KRON_TEST_X"] == "from_file"
+
+
+class TestGetSetting:
+    ENV_KEY = "KRON_TEST_SETTING"
+
+    @pytest.fixture(autouse=True)
+    def _isolate_env(self, monkeypatch):
+        monkeypatch.delenv(self.ENV_KEY, raising=False)
+
+    @pytest.fixture
+    def conf(self):
+        conf = ConfigParser()
+        conf["section"] = {"param": "from_conf", "empty": ""}
+        return conf
+
+    def test_env_has_priority(self, monkeypatch, conf):
+        monkeypatch.setenv(self.ENV_KEY, "from_env")
+        assert get_setting(env=self.ENV_KEY, conf=conf, section="section", param="param") == "from_env"
+
+    def test_falls_back_to_conf(self, conf):
+        assert get_setting(env=self.ENV_KEY, conf=conf, section="section", param="param") == "from_conf"
+
+    def test_empty_conf_value_falls_back_to_default(self, conf):
+        assert get_setting(env=self.ENV_KEY, conf=conf, section="section", param="empty", default="dflt") == "dflt"
+
+    def test_missing_option_returns_default(self, conf):
+        assert get_setting(env=self.ENV_KEY, conf=conf, section="section", param="nope", default="dflt") == "dflt"
+
+    def test_missing_option_without_default_raises(self, conf):
+        with pytest.raises(RuntimeError, match="Missing 'nope'"):
+            get_setting(env=self.ENV_KEY, conf=conf, section="section", param="nope")
+
+    def test_missing_section_returns_default(self, conf):
+        assert get_setting(env=self.ENV_KEY, conf=conf, section="other", param="param", default="dflt") == "dflt"
+
+    def test_missing_section_without_default_raises(self, conf):
+        with pytest.raises(RuntimeError, match="Missing config section 'other'"):
+            get_setting(env=self.ENV_KEY, conf=conf, section="other", param="param")
+
+    def test_returns_default_without_conf_or_env(self):
+        assert get_setting(env=self.ENV_KEY, param="param", default="dflt") == "dflt"
+
+    def test_returns_none_without_anything(self):
+        assert get_setting(env=self.ENV_KEY, param="param") is None

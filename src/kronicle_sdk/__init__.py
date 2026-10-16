@@ -1,3 +1,4 @@
+from kronicle_sdk.conf.log_settings import LogSettings
 from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings
 from kronicle_sdk.connectors.channel.channel_reader import KronicleReader
 from kronicle_sdk.connectors.channel.channel_setup import KronicleSetup
@@ -36,6 +37,7 @@ __all__ = [
     "KronicableSampleCollection",
     # Settings
     "ConnectionInformation",
+    "LogSettings",
     "Settings",
     # Errors
     "KronicleError",
