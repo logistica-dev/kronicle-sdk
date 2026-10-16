@@ -8,13 +8,20 @@ import pytest
 from kronicle_sdk.conf.env_keys import (
     KRONICLE_HOST,
     KRONICLE_PORT,
+    KRONICLE_SDK_CONF,
+    KRONICLE_SDK_LOG_FORMAT,
+    KRONICLE_SDK_LOG_LEVEL,
+    KRONICLE_SDK_LOG_TZ,
     KRONICLE_SU_CREDS,
     KRONICLE_SU_NAME,
     KRONICLE_SU_PASS,
+    KRONICLE_SU_PB64,
+    KRONICLE_USR_CREDS,
     KRONICLE_USR_NAME,
     KRONICLE_USR_PASS,
+    KRONICLE_USR_PB64,
 )
-from kronicle_sdk.conf.read_conf import ConnectionInformation, Settings, get_conf
+from kronicle_sdk.conf.read_conf import ConnectionInformation, Creds, Settings, _from_creds, get_conf
 from kronicle_sdk.utils.str_utils import encode_b64url
 
 
@@ -29,7 +36,7 @@ class TestConnectionInformation:
 
     def test_creds_property(self):
         conn = ConnectionInformation(host="h", port=1, usr="user", pwd="pass")
-        assert conn.creds == "userpass"
+        assert conn.creds == "user:pass"
 
 
 @pytest.fixture
@@ -53,11 +60,18 @@ def no_su_env(monkeypatch):
 ALL_KRONICLE_KEYS = (
     KRONICLE_HOST,
     KRONICLE_PORT,
+    KRONICLE_SDK_CONF,
+    KRONICLE_SDK_LOG_LEVEL,
+    KRONICLE_SDK_LOG_FORMAT,
+    KRONICLE_SDK_LOG_TZ,
+    KRONICLE_USR_CREDS,
     KRONICLE_USR_NAME,
     KRONICLE_USR_PASS,
+    KRONICLE_USR_PB64,
+    KRONICLE_SU_CREDS,
     KRONICLE_SU_NAME,
     KRONICLE_SU_PASS,
-    KRONICLE_SU_CREDS,
+    KRONICLE_SU_PB64,
 )
 
 
@@ -84,13 +98,17 @@ class TestSettings:
         Environment variables take priority over the INI file, even if the file exists.
         """
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {
+        conf_parser["kronicle_server"] = {
             "host": "filehost",
             "port": "4321",
+        }
+        conf_parser["kronicle_user"] = {
             "username": "fileuser",
             "password": "filepass",
-            "su_username": "sufileuser",
-            "su_password": "sufilepass",
+        }
+        conf_parser["kronicle_su"] = {
+            "username": "sufileuser",
+            "password": "sufilepass",
         }
 
         with patch("kronicle_sdk.conf.read_conf.read_ini_conf", return_value=conf_parser):
@@ -149,10 +167,9 @@ class TestSettings:
             monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {"host": "filehost"}
+        conf_parser["kronicle_server"] = {"host": "filehost"}
         s._conf = conf_parser
-        s._section = "kronicle"
-        val = s.get_setting(env=KRONICLE_HOST, param="host")
+        val = s.get_setting(env=KRONICLE_HOST, section="kronicle_server", param="host")
         assert val == "envhost"
 
     def test_get_setting_fallback_to_conf(self, monkeypatch):
@@ -162,10 +179,9 @@ class TestSettings:
             monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {"host": "filehost"}
+        conf_parser["kronicle_server"] = {"host": "filehost"}
         s._conf = conf_parser
-        s._section = "kronicle"
-        val = s.get_setting(env="NON_EXISTENT_ENV", param="host")
+        val = s.get_setting(env="NON_EXISTENT_ENV", section="kronicle_server", param="host")
         assert val == "filehost"
 
     def test_get_setting_returns_none_when_missing(self, monkeypatch):
@@ -175,12 +191,11 @@ class TestSettings:
             monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
         s = Settings(None)
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {}
+        conf_parser["kronicle_server"] = {}
         s._conf = conf_parser
-        s._section = "kronicle"
         assert s.get_setting(env="NON_EXISTENT") is None
-        with pytest.raises(RuntimeError):
-            s.get_setting(env="NON_EXISTENT", param="missing")
+        with pytest.raises(RuntimeError, match="Missing 'missing'"):
+            s.get_setting(env="NON_EXISTENT", section="kronicle_server", param="missing")
 
     def test_missing_host_with_port_raises(self, monkeypatch):
         # port set but no host: the localhost default does not kick in
@@ -194,11 +209,12 @@ class TestSettings:
     def test_get_setting_empty_conf_value_returns_default(self, base_env):
         s = Settings(None)
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {"host": ""}
+        conf_parser["kronicle_server"] = {"host": ""}
         s._conf = conf_parser
-        s._section = "kronicle"
-        assert s.get_setting(env="NON_EXISTENT_ENV", param="host", default="fallback") == "fallback"
-        assert s.get_setting(env="NON_EXISTENT_ENV", param="host") is None
+        assert s.get_setting(env="NON_EXISTENT_ENV", section="kronicle_server", param="host", default="fallback") == (
+            "fallback"
+        )
+        assert s.get_setting(env="NON_EXISTENT_ENV", section="kronicle_server", param="host") is None
 
 
 class TestSuperUserCredentials:
@@ -223,12 +239,13 @@ class TestSuperUserCredentials:
 
     @patch("kronicle_sdk.conf.read_conf.is_file", return_value=True)
     def test_su_options_missing_from_conf_fall_back(self, mock_is_file, clean_env):
-        # No su_username/su_password/su_creds options: both lookups raise and
-        # are swallowed, leaving no superuser connection.
+        # No [kronicle_su] section: the SU lookup finds nothing and stays None.
         conf_parser = ConfigParser()
-        conf_parser["kronicle"] = {
+        conf_parser["kronicle_server"] = {
             "host": "filehost",
             "port": "4321",
+        }
+        conf_parser["kronicle_user"] = {
             "username": "fileuser",
             "password": "filepass",
         }
@@ -237,6 +254,7 @@ class TestSuperUserCredentials:
         assert s.connection.host == "filehost"
         assert s.connection.port == 4321
         assert s.connection.usr == "fileuser"
+        assert s.connection.pwd == "filepass"
         assert s.connection_su is None
 
 
@@ -246,3 +264,138 @@ def test_get_conf_factory(monkeypatch):
     conf = get_conf()
     assert isinstance(conf, Settings)
     assert conf.connection.usr == "envuser"
+
+
+def test_get_conf_factory_with_ini_file(monkeypatch):
+    monkeypatch.setenv(KRONICLE_USR_NAME, "envuser")
+    monkeypatch.setenv(KRONICLE_USR_PASS, "envpass")
+    conf_parser = ConfigParser()
+    conf_parser["kronicle_server"] = {"host": "localhost", "port": "8000"}
+    with (
+        patch("kronicle_sdk.conf.read_conf.is_file", return_value=True),
+        patch("kronicle_sdk.conf.read_conf.read_ini_conf", return_value=conf_parser),
+    ):
+        conf = get_conf("./somefile.ini")
+    assert isinstance(conf, Settings)
+    assert conf.connection.host == "localhost"
+
+
+class TestCreds:
+    def test_creds_property(self):
+        assert Creds("user", "pass").creds == "user:pass"
+
+    def test_pwd_hidden_from_repr(self):
+        assert "pass" not in repr(Creds("user", "pass"))
+
+
+class TestFromCreds:
+    def test_empty_returns_none(self):
+        assert _from_creds("") is None
+        assert _from_creds(None) is None
+
+
+class TestPwdB64Flag:
+    """Password decoding driven by KRONICLE_USR_PB64 (env) or is_pwd_b64 (conf)."""
+
+    @pytest.fixture
+    def conf_env(self, clean_env, monkeypatch):
+        """Server info from ENV so the conf file only carries credentials."""
+        monkeypatch.setenv(KRONICLE_HOST, "envhost")
+        monkeypatch.setenv(KRONICLE_PORT, "1234")
+
+    @staticmethod
+    def _settings_from(conf_parser: ConfigParser) -> Settings:
+        with (
+            patch("kronicle_sdk.conf.read_conf.is_file", return_value=True),
+            patch("kronicle_sdk.conf.read_conf.read_ini_conf", return_value=conf_parser),
+        ):
+            return Settings("./somefile.ini")
+
+    # --- env-driven ---------------------------------------------------------
+    def test_env_plain_password_with_false_flag(self, base_env, monkeypatch):
+        monkeypatch.delenv(KRONICLE_USR_CREDS, raising=False)
+        monkeypatch.setenv(KRONICLE_USR_PASS, "plain-pwd")
+        monkeypatch.setenv(KRONICLE_USR_PB64, "False")
+        s = Settings(None)
+        assert s.connection.pwd == "plain-pwd"
+
+    def test_env_plain_password_without_flag(self, base_env, monkeypatch):
+        monkeypatch.delenv(KRONICLE_USR_CREDS, raising=False)
+        monkeypatch.setenv(KRONICLE_USR_PASS, "plain-pwd")
+        s = Settings(None)
+        assert s.connection.pwd == "plain-pwd"
+
+    def test_env_b64_password_decoded(self, base_env, monkeypatch):
+        monkeypatch.delenv(KRONICLE_USR_CREDS, raising=False)
+        monkeypatch.setenv(KRONICLE_USR_PASS, encode_b64url("s3cret"))
+        monkeypatch.setenv(KRONICLE_USR_PB64, "True")
+        s = Settings(None)
+        assert s.connection.pwd == "s3cret"
+
+    def test_env_b64_flag_with_invalid_b64_raises(self, base_env, monkeypatch):
+        monkeypatch.delenv(KRONICLE_USR_CREDS, raising=False)
+        monkeypatch.setenv(KRONICLE_USR_PASS, "not b64!!")
+        monkeypatch.setenv(KRONICLE_USR_PB64, "yes")
+        with pytest.raises(ValueError, match="base64url"):
+            Settings(None)
+
+    # --- conf-driven --------------------------------------------------------
+    def test_conf_plain_password_with_false_flag(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": "fileuser", "password": "plain-pwd", "is_pwd_b64": "False"}
+        s = self._settings_from(conf_parser)
+        assert s.connection.pwd == "plain-pwd"
+
+    def test_conf_plain_password_without_flag(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": "fileuser", "password": "plainpwd"}
+        s = self._settings_from(conf_parser)
+        assert s.connection.pwd == "plainpwd"
+
+    def test_conf_b64_password_decoded(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {
+            "username": "fileuser",
+            "password": encode_b64url("s3cret"),
+            "is_pwd_b64": "True",
+        }
+        s = self._settings_from(conf_parser)
+        assert s.connection.pwd == "s3cret"
+
+    def test_conf_b64_flag_with_invalid_b64_raises(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": "fileuser", "password": "not b64!!", "is_pwd_b64": "True"}
+        with pytest.raises(ValueError, match="base64url"):
+            self._settings_from(conf_parser)
+
+    def test_conf_credentials_option_takes_precedence(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {
+            "credentials": encode_b64url("b64user:b64pass"),
+            "username": "fileuser",
+            "password": "filepass",
+        }
+        s = self._settings_from(conf_parser)
+        assert s.connection.usr == "b64user"
+        assert s.connection.pwd == "b64pass"
+
+    def test_conf_without_credentials_option_falls_back_to_username_password(self, conf_env):
+        # Deleting the 'credentials' line (the documented alternative) must not break the lookup.
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": "fileuser", "password": "filepass"}
+        s = self._settings_from(conf_parser)
+        assert s.connection.usr == "fileuser"
+        assert s.connection.pwd == "filepass"
+
+    def test_conf_quotes_are_stripped(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": '"MyUser"', "password": '"All cats are beautiful!"'}
+        s = self._settings_from(conf_parser)
+        assert s.connection.usr == "MyUser"
+        assert s.connection.pwd == "All cats are beautiful!"
+
+    def test_conf_username_without_password_raises(self, conf_env):
+        conf_parser = ConfigParser()
+        conf_parser["kronicle_user"] = {"username": "fileuser"}
+        with pytest.raises(RuntimeError, match="credentials were not found"):
+            self._settings_from(conf_parser)

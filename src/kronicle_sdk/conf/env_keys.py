@@ -1,8 +1,38 @@
 # kronicle_sdk/conf/env_keys.py
+
+# Kronicle SDK conf file
+KRONICLE_SDK_CONF = "KRONICLE_SDK_CONF"
+
+# [kronicle_server]
 KRONICLE_HOST = "KRONICLE_HOST"
 KRONICLE_PORT = "KRONICLE_PORT"
+
+# [kronicle_user]
+KRONICLE_USR_CREDS = "KRONICLE_USR_CREDS"  # nosec B105
 KRONICLE_USR_NAME = "KRONICLE_USR_NAME"
 KRONICLE_USR_PASS = "KRONICLE_USR_PASS"  # nosec B105
+KRONICLE_USR_PB64 = "KRONICLE_USR_PB64"  # nosec B105
+
+# [kronicle_su]
+KRONICLE_SU_CREDS = "KRONICLE_SU_CREDS"  # nosec B105
 KRONICLE_SU_NAME = "KRONICLE_SU_NAME"
 KRONICLE_SU_PASS = "KRONICLE_SU_PASS"  # nosec B105
-KRONICLE_SU_CREDS = "KRONICLE_SU_CREDS"
+KRONICLE_SU_PB64 = "KRONICLE_SU_PB64"  # nosec B105
+
+# [kronicle_sdk_log]
+
+## Note:
+# * -> default value
+
+## Log level:
+#       NONE|ERROR|WARN|INFO|DEBUG
+#         -1|    0|   1|   2|   3*
+KRONICLE_SDK_LOG_LEVEL = "KRONICLE_SDK_LOG_LEVEL"
+
+## Log format:
+#       SYSLOG*|DEV
+KRONICLE_SDK_LOG_FORMAT = "KRONICLE_SDK_LOG_FORMAT"
+
+## Log timezone:
+#       LOCAL*|UTC
+KRONICLE_SDK_LOG_TZ = "KRONICLE_SDK_LOG_TZ"

@@ -192,12 +192,9 @@ class KronicleAbstractChannelConnector(KronicleUsrLogin):
         """
         here = "get_chan_by_name"
         norm_name = normalize_to_snake_case(channel_name)
-        log_d(
-            here,
-            f"Looking for channel '{channel_name}' (normalized as '{norm_name}')",
-        )
+        log_d(here, f"Looking for channel '{channel_name}' (normalized as '{norm_name}')")
         res = self.get(route=f"channels/?name={norm_name}", strict=False)
-        log_d("get_chan_by_name", res)
+        # log_d("get_chan_by_name", res)
         return self._ensure_is_payload_or_none(res)
 
     def get_channel_with_tags(self, tags: dict[str, str]) -> list[KronicleChannel]:

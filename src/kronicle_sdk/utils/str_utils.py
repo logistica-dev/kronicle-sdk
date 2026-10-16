@@ -1,6 +1,6 @@
 import re
 from base64 import urlsafe_b64decode, urlsafe_b64encode
-from datetime import datetime
+from datetime import datetime, tzinfo
 from json import dumps
 from random import choices
 from re import compile, sub
@@ -224,6 +224,10 @@ TimeSpec = Literal["seconds", "milliseconds", "microseconds"]
 
 def now_iso_str(timespec: TimeSpec = "seconds") -> str:
     return datetime.now().astimezone().isoformat(timespec=timespec)
+
+
+def now_ms(tz: tzinfo | None = None) -> str:
+    return datetime.now(tz).isoformat(sep=" ", timespec="milliseconds")
 
 
 # --------------------------------------------------------------------------------------------------

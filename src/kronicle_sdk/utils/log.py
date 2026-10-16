@@ -1,22 +1,37 @@
-from datetime import datetime
 from time import time
 
-from kronicle_sdk.utils.str_utils import enforce_length
+from kronicle_sdk.conf.log_settings import LOG_STR, LogSettings
+from kronicle_sdk.utils.str_utils import enforce_length, now_ms
 
-SHOULD_LOG = True
+LOG_CONF = LogSettings.read_log_conf()
+# LOG_LEVEL = LOG.level
+# LOG_FORMAT = LOG.format
+# LOG_TZ = LOG.tz
+
 HERE_LEN = 15
 
 
-def _now() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
 def log(*args, **kwargs):  # pragma: no cover
-    if SHOULD_LOG:
+    if LOG_CONF.level < 0:
+        return
+    if len(args) == 0:
+        print()
+        return
+
+    log_lvl = args[0]
+    log_lvl_str = enforce_length(LOG_STR[log_lvl], 5)
+
+    if LOG_CONF.format == "SYSLOG":
+        if len(args) > 1:
+            print(now_ms(LOG_CONF.tz), f"[{log_lvl_str}]", f"[{args[1]}]", *args[2:], **kwargs)
+        else:
+            print(now_ms(LOG_CONF.tz), f"[{log_lvl_str}]")
+    else:
+        log_letter = log_lvl_str[0]
         if len(args) < 2:
-            print(f"D {_now()}")
+            print(f"{log_letter} {now_ms()}")
             return
-        start_line = f"{args[0]} {_now()} [{enforce_length(args[1], HERE_LEN)}]"
+        start_line = f"{log_letter} {now_ms()} [{enforce_length(args[1], HERE_LEN)}]"
         if len(args) == 2:
             print(f"{start_line} <")
             return
@@ -31,19 +46,22 @@ def log(*args, **kwargs):  # pragma: no cover
 
 
 def log_e(*args, **kwargs):  # pragma: no cover
-    log("E", *args)
+    log(0, *args, **kwargs)
 
 
 def log_w(*args, **kwargs):  # pragma: no cover
-    log("W", *args)
+    if LOG_CONF.level > 0:
+        log(1, *args, **kwargs)
 
 
 def log_i(*args, **kwargs):  # pragma: no cover
-    log("I", *args)
+    if LOG_CONF.level > 1:
+        log(2, *args, **kwargs)
 
 
 def log_d(*args, **kwargs):  # pragma: no cover
-    log("D", *args, **kwargs)
+    if LOG_CONF.level > 2:
+        log(3, *args, **kwargs)
 
 
 def log_d_if(should_print: bool, *args, **kwargs):  # pragma: no cover
@@ -71,6 +89,7 @@ def log_assert(cond: bool, ok_tag: str = "OK", ko_tag: str = "!! KO !!"):  # pra
 
 if __name__ == "__main__":  # pragma: no cover
     log_d()
-    log_d("Test log")
-    log_d("Log", "Test")
-    log_d("Log", "Main", "test")
+    log_d("Test")
+    log_i("Test log")
+    log_w("Log", "Test")
+    log_e("Log", "Main", "test")

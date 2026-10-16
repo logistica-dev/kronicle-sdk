@@ -58,7 +58,7 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         if jwt and isinstance(jwt, str):
             self._jwt = jwt
             self._exp = None
-            log_d("get_jwt", f"logged in as '{self.usr}' on", self.url)
+            # log_d("get_jwt", f"logged in as '{self.usr}' on", self.url)
             return self._jwt
         else:
             raise KronicleResponseError("No field 'access_token' found in server response")
