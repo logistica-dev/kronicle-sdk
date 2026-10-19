@@ -26,7 +26,7 @@ KRONICLE_SU_PB64 = "KRONICLE_SU_PB64"  # nosec B105
 
 ## Log level:
 #       NONE|ERROR|WARN|INFO|DEBUG
-#         -1|   0|    1|   2|  3*|
+#         -1|    0|   1|   2|   3*
 KRONICLE_SDK_LOG_LEVEL = "KRONICLE_SDK_LOG_LEVEL"
 
 ## Log format:
