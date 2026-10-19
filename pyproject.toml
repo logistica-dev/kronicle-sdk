@@ -1,6 +1,6 @@
 [project]
 name = "kronicle-sdk"
-version = "0.7.1"
+version = "0.7.2"
 description = "SDK to read and write data on a Kronicle microservice"
 authors = [
     { name = "Olivier Martineau", email = "olivier.martineau@irisa.fr" },
@@ -40,12 +40,7 @@ test = [
     "tox-uv>=1.37.0",
     "tox>=4.67.1",
 ]
-build = [
-    "build>=1.6.1",
-    "setuptools>=84.0.0",
-    "twine>=7.0.0",
-    "wheel>=0.48.0",
-]
+build = ["build>=1.6.1", "setuptools>=84.0.0", "twine>=7.0.0", "wheel>=0.48.0"]
 
 [project.urls]
 Homepage = "https://github.com/logistica-dev/kronicle-sdk"
@@ -74,7 +69,9 @@ targets = ["src"]
 # ----- Tool: commitizen
 [tool.commitizen]
 name = "cz_conventional_commits"
+version_files = ["pyproject.toml:project.version"]
 version_provider = "pep621"
+pre_bump_hooks = ["scripts/commit/commitizen_pre_bump_hook.sh"]
 
 # ----- Tool: pytest
 [tool.pytest.ini_options]
