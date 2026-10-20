@@ -130,8 +130,12 @@ def ensure_uuid4(id) -> UUID:
     return uid
 
 
-def strip_quotes(v: Any) -> Any:
-    return v[1:-1] if isinstance(v, str) and len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'") else v
+def strip_quotes(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
 
 
 SQL_COL_MAX_LEN = 63

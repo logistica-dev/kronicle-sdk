@@ -21,20 +21,10 @@ from kronicle_sdk.conf.env_keys import (
     KRONICLE_USR_PASS,
     KRONICLE_USR_PB64,
 )
-from kronicle_sdk.utils.conf_utils import get_setting, read_ini_conf
+from kronicle_sdk.utils.conf_utils import from_creds, get_setting, is_true, read_ini_conf
 from kronicle_sdk.utils.file_utils import is_file
 from kronicle_sdk.utils.log import log_d, log_e, log_w
-from kronicle_sdk.utils.str_utils import decode_b64url, now_ms
-
-
-def _is_true(value: str | None) -> bool:
-    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _strip_quotes(value: str) -> str:
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
-        return value[1:-1]
-    return value
+from kronicle_sdk.utils.str_utils import decode_b64url, now_ms, strip_quotes
 
 
 def _decode_pwd_flag(pwd: str, flag_value: bool, here: str) -> str:
@@ -46,42 +36,29 @@ def _decode_pwd_flag(pwd: str, flag_value: bool, here: str) -> str:
         raise ValueError(f"{here} should be base64url encoded ('is_pwd_b64' is set to True)") from e
 
 
-def _from_creds(b64_creds) -> tuple[str, str] | None:
-    if not b64_creds:
-        return
-    try:
-        creds = decode_b64url(b64_creds).split(":")
-    except ValueError as e:
-        raise ValueError("Credentials should be base64url encoded") from e
-    if len(creds) == 2:
-        usr, pwd = creds
-        return usr, pwd
-    raise ValueError("Incorrect syntax for credentials")
-
-
 def _extract_creds_from_env(
     creds_env_var: str, usr_env_var: str, pwd_env_var: str, is_b64_env_var: str
 ) -> tuple[str, str] | None:
     if env_creds := os.getenv(creds_env_var):
-        return _from_creds(env_creds)
+        return from_creds(env_creds)
     usr = os.getenv(usr_env_var)
     pwd = os.getenv(pwd_env_var)
     if not usr or not pwd:
         return None
-    if _is_true(os.getenv(is_b64_env_var)):
+    if is_true(os.getenv(is_b64_env_var)):
         pwd = _decode_pwd_flag(pwd, True, f"'{pwd_env_var}'")
     return usr, pwd
 
 
 def _extract_creds_from_conf(conf: ConfigParser, section: str) -> tuple[str, str] | None:
     if creds := conf.get(section, "credentials", fallback=None):
-        return _from_creds(creds)
+        return from_creds(creds)
     usr = conf.get(section, "username", fallback=None)
     pwd = conf.get(section, "password", fallback=None)
     if not usr or not pwd:
         return None
-    usr = _strip_quotes(usr)
-    pwd = _strip_quotes(pwd)
+    usr = strip_quotes(usr)
+    pwd = strip_quotes(pwd)
     is_pwd_b64 = conf.getboolean(section, "is_pwd_b64", fallback=False)
     pwd = _decode_pwd_flag(pwd, is_pwd_b64, f"'password' in section [{section}]")
     return usr, pwd

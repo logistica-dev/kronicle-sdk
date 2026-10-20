@@ -21,7 +21,7 @@ from kronicle_sdk.conf.env_keys import (
     KRONICLE_USR_PASS,
     KRONICLE_USR_PB64,
 )
-from kronicle_sdk.conf.read_conf import ConnectionInformation, Creds, Settings, _from_creds, get_conf
+from kronicle_sdk.conf.read_conf import ConnectionInformation, Creds, Settings, get_conf
 from kronicle_sdk.utils.str_utils import encode_b64url
 
 
@@ -286,12 +286,6 @@ class TestCreds:
 
     def test_pwd_hidden_from_repr(self):
         assert "pass" not in repr(Creds("user", "pass"))
-
-
-class TestFromCreds:
-    def test_empty_returns_none(self):
-        assert _from_creds("") is None
-        assert _from_creds(None) is None
 
 
 class TestPwdB64Flag:

@@ -5,6 +5,7 @@ from typing import Any
 
 from kronicle_sdk.conf.env_keys import KRONICLE_SDK_CONF
 from kronicle_sdk.utils.file_utils import check_is_file, is_file
+from kronicle_sdk.utils.str_utils import decode_b64url
 
 
 def read_conf_file():
@@ -37,6 +38,23 @@ def parse_value(value: str):
     if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
         return value[1:-1]
     return value
+
+
+def is_true(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def from_creds(b64_creds: str | None) -> tuple[str, str] | None:
+    if not b64_creds:
+        return
+    try:
+        creds = decode_b64url(b64_creds).split(":")
+    except ValueError as e:
+        raise ValueError("Credentials should be base64url encoded") from e
+    if len(creds) == 2:
+        usr, pwd = creds
+        return usr, pwd
+    raise ValueError("Incorrect syntax for credentials")
 
 
 def load_env(file_path: str = ".env", override: bool = False):

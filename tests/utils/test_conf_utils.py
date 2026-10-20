@@ -4,7 +4,7 @@ from os import environ
 
 import pytest
 
-from kronicle_sdk.utils.conf_utils import get_setting, load_env, parse_value, read_ini_conf
+from kronicle_sdk.utils.conf_utils import from_creds, get_setting, load_env, parse_value, read_ini_conf
 
 
 class TestParseValue:
@@ -104,6 +104,12 @@ class TestLoadEnv:
 
         load_env(str(env_file), override=True)
         assert environ["KRON_TEST_X"] == "from_file"
+
+
+class TestFromCreds:
+    def test_empty_returns_none(self):
+        assert from_creds("") is None
+        assert from_creds(None) is None
 
 
 class TestGetSetting:
