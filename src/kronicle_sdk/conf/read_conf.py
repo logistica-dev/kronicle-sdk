@@ -92,7 +92,7 @@ class ConnectionInformation:
 
     @property
     def url(self):
-        _port = f":{self.port}" if self.port else ""
+        _port = f":{self.port}" if self.port is not None else ""
         return f"{self._schema}://{self.host}{_port}"
 
     @property
@@ -119,7 +119,7 @@ class Settings:
     def _extract_server_info(self) -> tuple[str, int | None]:
         host = self.get_setting(env=KRONICLE_HOST, section="kronicle_server", param="host")
         _port = self.get_setting(env=KRONICLE_PORT, section="kronicle_server", param="port")
-        port = int(_port) if _port else None
+        port = int(_port) if _port is not None else None
         if not host and not port:
             log_w("Settings", "Connection information not found, defaulting to localhost:8000")
             host = "localhost"

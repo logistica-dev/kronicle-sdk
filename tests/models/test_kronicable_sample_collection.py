@@ -87,21 +87,21 @@ class TestRows:
         assert rows == [{name: getattr(sample, name, None) for name in sample.channel_schema}]
 
 
-class TestToKroniclePayload:
+class TestToKronicleChannel:
     def test_empty_collection_raises(self):
         with pytest.raises(ValueError, match="No sample to convert"):
-            KronicableSampleCollection(_base()).to_kronicle_payload()
+            KronicableSampleCollection(_base()).to_kronicle_channel()
 
     def test_missing_schema_raises(self):
         collection = KronicableSampleCollection(_base(), [_metric()])
         with pytest.raises(ValueError, match="No schema was provided"):
-            collection.to_kronicle_payload()
+            collection.to_kronicle_channel()
 
     def test_payload_carries_rows_and_schema(self):
         collection = KronicableSampleCollection(_base())
         sample = _metric(7.5)
         collection.add_sample(sample)
-        payload = collection.to_kronicle_payload()
+        payload = collection.to_kronicle_channel()
         assert payload.rows == collection.rows
         assert payload.channel_schema == collection._schema
         assert payload.name == "transfer_channel"

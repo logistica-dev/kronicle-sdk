@@ -38,7 +38,7 @@ PRIMITIVE_TYPES: Final = tuple(EXT_COL_TO_PY_TYPE.values())
 class KronicableTypeChecker:
     """
     Validates Python type annotations or type strings as Kronicable types
-    for KroniclePayload schemas.
+    for KronicleChannel schemas.
 
     A type is considered "Kronicable" if it belongs to one of the following:
         - a supported primitive type (str, int, float, bool, datetime, dict, list)
@@ -48,10 +48,10 @@ class KronicableTypeChecker:
 
     This validator is used to ensure that each field in a KronicableSample
     has a compatible type so it can be correctly serialized and pushed into
-    a KroniclePayload.
+    a KronicleChannel.
     """
 
-    # Allowed primitives come directly from KroniclePayload's type mapping
+    # Allowed primitives come directly from KronicleChannel's type mapping
 
     def __init__(self, annotation: Any):
         """

@@ -105,8 +105,8 @@ class KronicleUsrLogin(KronicleAbstractConnector):
         Args:
             method: requests HTTP method (get, post, put, delete, patch)
             route: route path to append to base URL
-            body: optional payload (dict or KroniclePayload)
-            strict: validate the response as KroniclePayload(s)
+            body: optional payload (dict or KronicleChannel)
+            strict: validate the response as KronicleChannel(s)
             should_log: log the request
             prefix: override the class prefix (e.g. "/data/v1")
             params: URL query parameters

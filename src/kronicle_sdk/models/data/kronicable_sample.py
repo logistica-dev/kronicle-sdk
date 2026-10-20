@@ -19,7 +19,7 @@ ACCEPTABLE_PRIMITIVES = list(COL_TO_PY_TYPE.keys())
 
 class KronicableSample(BaseModel):
     """
-    Base class for metrics that can be converted into a KroniclePayload.
+    Base class for metrics that can be converted into a KronicleChannel.
 
     - Ensures that every field (regular or computed) has exactly one type
       or is nullable (Optional[T]) or is a BaseModel/list/dict of BaseModels.
@@ -41,7 +41,7 @@ class KronicableSample(BaseModel):
         return values
 
     # ----------------------------------------------------------------------------------------------
-    # Methods to generate KroniclePayload
+    # Methods to generate KronicleChannel
     # ----------------------------------------------------------------------------------------------
     @classmethod
     def list_fields(cls):
@@ -86,7 +86,7 @@ class KronicableSample(BaseModel):
     # ----------------------------------------------------------------------------------------------
     def to_row(self) -> dict[str, Any]:
         """
-        Convert this object into a dictionary for KroniclePayload.
+        Convert this object into a dictionary for KronicleChannel.
         Nested BaseModel or list/dict of BaseModels is serialized to dict.
         Fields with None values are omitted (optional fields not set).
         """

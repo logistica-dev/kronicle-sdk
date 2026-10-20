@@ -9,10 +9,10 @@ from kronicle_sdk.models.iso_datetime import now, now_local
 class KronicableSampleCollection:
     """
     A collection of KronicableSample objects that can be converted into a
-    single KroniclePayload for transmission to the Kronicle microservice.
+    single KronicleChannel for transmission to the Kronicle microservice.
 
     Ensures that all samples share the same schema and automatically merges
-    their rows into a KroniclePayload.
+    their rows into a KronicleChannel.
     """
 
     base_payload: KronicleChannel
@@ -24,7 +24,7 @@ class KronicableSampleCollection:
 
         Parameters
         ----------
-        base_payload : KroniclePayload
+        base_payload : KronicleChannel
             The base payload providing channel metadata (channel_id, name, etc.).
         sample_list : list[KronicableSample] | None
             Optional initial samples to add to the collection.
@@ -89,9 +89,9 @@ class KronicableSampleCollection:
             rows.append(row)
         return rows
 
-    def to_kronicle_payload(self) -> KronicleChannel:
+    def to_kronicle_channel(self) -> KronicleChannel:
         """
-        Convert the collection into a single KroniclePayload.
+        Convert the collection into a single KronicleChannel.
         Each sample becomes a row; the payload uses the merged schema.
 
         Raises
@@ -105,9 +105,7 @@ class KronicableSampleCollection:
             # Should never happen
             raise ValueError("No schema was provided")
 
-        payload = KronicleChannel(
-            **self.base_payload.model_dump(),
-        )
+        payload = KronicleChannel(**self.base_payload.model_dump())
         payload.rows = self.rows
         payload.channel_schema = self._schema
         return payload
@@ -155,9 +153,9 @@ if __name__ == "__main__":  # pragma: no cover
     log_d(here, "Added samples:", collection.samples)
     log_d(here, "Collection rows:", collection.rows)
 
-    # Convert to KroniclePayload
-    payload = collection.to_kronicle_payload()
-    log_d(here, "KroniclePayload:", payload)
+    # Convert to KronicleChannel
+    payload = collection.to_kronicle_channel()
+    log_d(here, "KronicleChannel:", payload)
 
     # -------------------------------
     # Test schema mismatch
@@ -180,6 +178,6 @@ if __name__ == "__main__":  # pragma: no cover
     # -------------------------------
     empty_collection = KronicableSampleCollection(base_payload)
     try:
-        empty_payload = empty_collection.to_kronicle_payload()
+        empty_payload = empty_collection.to_kronicle_channel()
     except ValueError as e:
         log_d(here, "Caught expected error on empty collection:", e)

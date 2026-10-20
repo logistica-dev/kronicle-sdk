@@ -314,3 +314,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     for e in ["z", 1, 1.2, True, Any, type, (), [], {}]:
         print(here, "get_type", e, "->", get_type(e))
+
+    for ss in ["e", "ee", "ert", "oert", "oughc"]:
+        print(here, pad_b64_str(ss), enc := encode_b64url(ss), decode_b64url(enc))
