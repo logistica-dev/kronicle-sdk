@@ -21,10 +21,7 @@ classifiers = [
 keywords = ["Kronicle", "Kronicle SDK", "Univ. Rennes", "IRISA"]
 
 # ------ Dependencies
-dependencies = [
-    "requests>=2.34.2",
-    "pydantic[email]>=2.14.1",
-]
+dependencies = ["requests>=2.34.2", "pydantic[email]>=2.14.1"]
 
 # ------ Optional dependencies
 [dependency-groups]

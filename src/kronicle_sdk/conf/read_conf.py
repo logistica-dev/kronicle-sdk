@@ -88,6 +88,9 @@ class ConnectionInformation:
     def _schema(self):
         if self.ssl is None:
             self.ssl = self.host not in ["localhost", "127.0.0.1"]
+        if self.host.startswith("https://"):
+            self.ssl = True
+            self.host = self.host[8:]
         return f"http{'s' if self.ssl else ''}"
 
     @property
@@ -119,7 +122,7 @@ class Settings:
     def _extract_server_info(self) -> tuple[str, int | None]:
         host = self.get_setting(env=KRONICLE_HOST, section="kronicle_server", param="host")
         _port = self.get_setting(env=KRONICLE_PORT, section="kronicle_server", param="port")
-        port = int(_port) if _port is not None else None
+        port = int(_port) if _port else None
         if not host and not port:
             log_w("Settings", "Connection information not found, defaulting to localhost:8000")
             host = "localhost"
