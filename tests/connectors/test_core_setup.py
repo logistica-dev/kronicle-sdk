@@ -228,6 +228,176 @@ class TestKronicleCoreZones:
         assert result.id == zid
 
 
+class TestKronicleCoreZoneHierarchy:
+    def test_attach_zone_posts_parent_id(self, core, monkeypatch):
+        parent_id = uuid4()
+        child_id = uuid4()
+        captured = {}
+
+        def mock_post(*, route, params=None, **kw):
+            captured["route"] = route
+            captured["params"] = params
+            return {"detail": "Zone attached successfully"}
+
+        monkeypatch.setattr(core, "post", mock_post)
+        res = core.attach_zone(parent_id=parent_id, child_id=child_id)
+        assert captured["route"] == f"/zones/{child_id}/parent"
+        assert captured["params"] == {"parent_id": str(parent_id)}
+        assert res == {"detail": "Zone attached successfully"}
+
+    def test_detach_zone_deletes_parent_id(self, core, monkeypatch):
+        parent_id = uuid4()
+        child_id = uuid4()
+        captured = {}
+
+        def mock_delete(*, route, params=None, **kw):
+            captured["route"] = route
+            captured["params"] = params
+            return {"detail": "Zone detached successfully"}
+
+        monkeypatch.setattr(core, "delete", mock_delete)
+        res = core.detach_zone(parent_id=parent_id, child_id=child_id)
+        assert captured["route"] == f"/zones/{child_id}/parent"
+        assert captured["params"] == {"parent_id": str(parent_id)}
+        assert res == {"detail": "Zone detached successfully"}
+
+    def test_list_zone_parents(self, core, monkeypatch):
+        zid = uuid4()
+
+        def mock_get(*, route, **kw):
+            assert route == f"/zones/{zid}/parents"
+            return [zone_dict(name="ParentZone")]
+
+        monkeypatch.setattr(core, "get", mock_get)
+        parents = core.list_zone_parents(zone_id=zid)
+        assert len(parents) == 1
+        assert isinstance(parents[0], KronicleZone)
+        assert parents[0].name == "ParentZone"
+
+    def test_list_zone_children(self, core, monkeypatch):
+        zid = uuid4()
+
+        def mock_get(*, route, **kw):
+            assert route == f"/zones/{zid}/children"
+            return [zone_dict(name="ChildZone")]
+
+        monkeypatch.setattr(core, "get", mock_get)
+        children = core.list_zone_children(zone_id=zid)
+        assert len(children) == 1
+        assert isinstance(children[0], KronicleZone)
+        assert children[0].name == "ChildZone"
+
+    def test_list_zone_ancestors(self, core, monkeypatch):
+        zid = uuid4()
+
+        def mock_get(*, route, **kw):
+            assert route == f"/zones/{zid}/ancestors"
+            return [zone_dict(name="GrandParent"), zone_dict(name="ParentZone")]
+
+        monkeypatch.setattr(core, "get", mock_get)
+        ancestors = core.list_zone_ancestors(zone_id=zid)
+        assert [a.name for a in ancestors] == ["GrandParent", "ParentZone"]
+        assert all(isinstance(a, KronicleZone) for a in ancestors)
+
+    def test_list_zone_descendants(self, core, monkeypatch):
+        zid = uuid4()
+
+        def mock_get(*, route, **kw):
+            assert route == f"/zones/{zid}/descendants"
+            return [zone_dict(name="ChildZone"), zone_dict(name="GrandChildZone")]
+
+        monkeypatch.setattr(core, "get", mock_get)
+        descendants = core.list_zone_descendants(zone_id=zid)
+        assert [d.name for d in descendants] == ["ChildZone", "GrandChildZone"]
+        assert all(isinstance(d, KronicleZone) for d in descendants)
+
+    def test_get_zone_parent(self, core, monkeypatch):
+        zid = uuid4()
+        parent_id = uuid4()
+
+        def mock_get(*, route, **kw):
+            return [zone_dict(zid=parent_id, name="ParentZone")]
+
+        monkeypatch.setattr(core, "get", mock_get)
+        parent = core.get_zone_parent(zone_id=zid)
+        assert parent is not None
+        assert parent.id == parent_id
+
+    def test_get_zone_parent_when_root(self, core, monkeypatch):
+        monkeypatch.setattr(core, "get", lambda *, route, **kw: [])
+        assert core.get_zone_parent(zone_id=uuid4()) is None
+
+    def test_move_zone_to_parent_detaches_current_parent(self, core, monkeypatch):
+        old_parent_id = uuid4()
+        new_parent_id = uuid4()
+        child_id = uuid4()
+        calls = []
+
+        def mock_get(*, route, **kw):
+            return [zone_dict(zid=old_parent_id, name="OldParent")]
+
+        def mock_delete(*, route, params=None, **kw):
+            calls.append(("delete", params))
+            return {"detail": "Zone detached successfully"}
+
+        def mock_post(*, route, params=None, **kw):
+            calls.append(("post", params))
+            return {"detail": "Zone attached successfully"}
+
+        monkeypatch.setattr(core, "get", mock_get)
+        monkeypatch.setattr(core, "delete", mock_delete)
+        monkeypatch.setattr(core, "post", mock_post)
+        core.move_zone_to_parent(parent_id=new_parent_id, child_id=child_id)
+        assert calls == [
+            ("delete", {"parent_id": str(old_parent_id)}),
+            ("post", {"parent_id": str(new_parent_id)}),
+        ]
+
+    def test_move_zone_to_parent_keeps_same_parent(self, core, monkeypatch):
+        parent_id = uuid4()
+        child_id = uuid4()
+        calls = []
+
+        def mock_get(*, route, **kw):
+            return [zone_dict(zid=parent_id, name="SameParent")]
+
+        def mock_delete(*, route, params=None, **kw):
+            calls.append(("delete", params))
+            return {"detail": "Zone detached successfully"}
+
+        def mock_post(*, route, params=None, **kw):
+            calls.append(("post", params))
+            return {"detail": "Zone attached successfully"}
+
+        monkeypatch.setattr(core, "get", mock_get)
+        monkeypatch.setattr(core, "delete", mock_delete)
+        monkeypatch.setattr(core, "post", mock_post)
+        core.move_zone_to_parent(parent_id=parent_id, child_id=child_id)
+        assert calls == [("post", {"parent_id": str(parent_id)})]
+
+    def test_move_zone_to_parent_when_root(self, core, monkeypatch):
+        parent_id = uuid4()
+        child_id = uuid4()
+        calls = []
+
+        def mock_get(*, route, **kw):
+            return []
+
+        def mock_delete(*, route, params=None, **kw):
+            calls.append(("delete", params))
+            return {"detail": "Zone detached successfully"}
+
+        def mock_post(*, route, params=None, **kw):
+            calls.append(("post", params))
+            return {"detail": "Zone attached successfully"}
+
+        monkeypatch.setattr(core, "get", mock_get)
+        monkeypatch.setattr(core, "delete", mock_delete)
+        monkeypatch.setattr(core, "post", mock_post)
+        core.move_zone_to_parent(parent_id=parent_id, child_id=child_id)
+        assert calls == [("post", {"parent_id": str(parent_id)})]
+
+
 class TestKronicleCoreChannels:
     def test_list_core_channels_all(self, core, monkeypatch):
         fake = [channel_dict(), channel_dict(name="Channel_2")]

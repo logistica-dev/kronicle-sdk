@@ -75,6 +75,54 @@ class KronicleCore(KronicleUsrLogin):
         return KronicleZone.from_json(deleted) if deleted else None
 
     # ----------------------------------------------------------------------------------------------
+    # Zone Hierarchy
+    # ----------------------------------------------------------------------------------------------
+
+    def attach_zone(self, *, parent_id: UUID, child_id: UUID) -> dict:
+        """Attach a zone under another one.
+
+        A zone may have at most one parent. The server rejects (HTTP 400) a
+        self-attachment, a cycle, and a child that already has a parent.
+        """
+        return self.post(route=f"/zones/{child_id}/parent", params={"parent_id": str(parent_id)})
+
+    def detach_zone(self, *, parent_id: UUID, child_id: UUID) -> dict:
+        """Remove the parent-child link between two zones."""
+        return self.delete(route=f"/zones/{child_id}/parent", params={"parent_id": str(parent_id)})
+
+    def list_zone_parents(self, *, zone_id: UUID) -> list[KronicleZone]:
+        """List the direct parents of a zone (at most one)."""
+        parents = self.get(route=f"/zones/{zone_id}/parents")
+        return [KronicleZone.from_json(p) for p in parents]
+
+    def list_zone_children(self, *, zone_id: UUID) -> list[KronicleZone]:
+        """List the direct children of a zone."""
+        children = self.get(route=f"/zones/{zone_id}/children")
+        return [KronicleZone.from_json(c) for c in children]
+
+    def list_zone_ancestors(self, *, zone_id: UUID) -> list[KronicleZone]:
+        """List all the ancestors of a zone (transitive)."""
+        ancestors = self.get(route=f"/zones/{zone_id}/ancestors")
+        return [KronicleZone.from_json(a) for a in ancestors]
+
+    def list_zone_descendants(self, *, zone_id: UUID) -> list[KronicleZone]:
+        """List all the descendants of a zone (transitive)."""
+        descendants = self.get(route=f"/zones/{zone_id}/descendants")
+        return [KronicleZone.from_json(d) for d in descendants]
+
+    def get_zone_parent(self, *, zone_id: UUID) -> KronicleZone | None:
+        """Return the parent of a zone, or None when the zone is a root."""
+        parents = self.list_zone_parents(zone_id=zone_id)
+        return parents[0] if parents else None
+
+    def move_zone_to_parent(self, *, parent_id: UUID, child_id: UUID) -> dict:
+        """Move a zone under a new parent, detaching its current parent first."""
+        current = self.get_zone_parent(zone_id=child_id)
+        if current and current.id is not None and current.id != parent_id:
+            self.detach_zone(parent_id=current.id, child_id=child_id)
+        return self.attach_zone(parent_id=parent_id, child_id=child_id)
+
+    # ----------------------------------------------------------------------------------------------
     # Core Channels
     # ----------------------------------------------------------------------------------------------
 

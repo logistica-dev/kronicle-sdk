@@ -292,10 +292,11 @@ class KronicleAbstractConnector(ABC):
         body: KronicleChannel | dict | None = None,
         *,
         prefix: str | None = None,
+        params: dict | None = None,
         **kwargs,
     ) -> Any:
         """Perform a POST request with validation."""
-        return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, **kwargs)
+        return self._request(post, route=route, body=body, prefix=prefix, timeout=self.timeout, params=params, **kwargs)
 
     def put(
         self,

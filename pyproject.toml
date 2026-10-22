@@ -43,7 +43,7 @@ test = [
     "tox-uv>=1.37.0",
     "tox>=4.67.1",
 ]
-build = ["build>=1.6.1", "setuptools>=84.2.0", "twine>=7.0.0", "wheel>=0.48.0"]
+build = ["build>=1.6.1", "setuptools>=84.2.1", "twine>=7.0.0", "wheel>=0.48.0"]
 
 [project.urls]
 Homepage = "https://github.com/logistica-dev/kronicle-sdk"
@@ -52,7 +52,7 @@ Repository = "https://github.com/logistica-dev/kronicle-sdk"
 
 
 [build-system]
-requires = ["setuptools>=84.2.0"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 # ----- Tool: uv

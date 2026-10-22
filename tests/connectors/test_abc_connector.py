@@ -472,6 +472,19 @@ class TestVerbWrappers:
         assert captured["url"] == "http://host/api/v1/channels"
         assert captured["kwargs"]["json"] == {"name": "chan_a"}
 
+    def test_post_wrapper_with_params(self, conn, monkeypatch):
+        captured = {}
+
+        def fake_post(*, url, **kwargs):
+            captured["url"] = url
+            captured["kwargs"] = kwargs
+            return make_response(200, {"ok": True})
+
+        monkeypatch.setattr(abc, "post", fake_post)
+        conn.post("/zones/1/parent", params={"parent_id": "2"})
+        assert captured["url"] == "http://host/api/v1/zones/1/parent"
+        assert captured["kwargs"]["params"] == {"parent_id": "2"}
+
     def test_put_wrapper(self, conn, monkeypatch):
         captured = {}
 
